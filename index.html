@@ -1,0 +1,1915 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attribution Playground — walk_sum</title>
+<script>/* dev: ?shot defers the load event so headless screenshots catch the rendered app */
+if (location.search.includes("shot"))
+  document.write('<img src="/api/hold?ms=5000" style="display:none" alt="">');
+</script>
+<style>
+:root{
+  --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --grid:#dcdbd6; --card:#ffffff;
+}
+*{box-sizing:border-box; margin:0}
+html,body{background:var(--surface); color:var(--ink);
+  font:14px/1.45 ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+button,select,input{font:inherit; color:inherit}
+h1{font-size:17px; font-weight:650; letter-spacing:-.01em}
+small,.muted{color:var(--ink2)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px}
+
+header{display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding:11px 20px; border-bottom:1px solid var(--grid); position:sticky; top:0;
+  background:var(--surface); z-index:30}
+header .spacer{flex:1}
+.seg{display:inline-flex; border:1px solid var(--grid); border-radius:8px; overflow:hidden}
+.seg button{padding:5px 12px; border:0; background:transparent; cursor:pointer; color:var(--ink2)}
+.seg button.on{background:var(--ink); color:var(--surface)}
+.btn{padding:5px 12px; border:1px solid var(--grid); border-radius:8px; background:var(--card);
+  cursor:pointer}
+.btn:hover{border-color:var(--ink2)}
+.btn.nav{padding:5px 9px}
+.badge{font-size:11px; padding:2px 8px; border:1px solid var(--grid); border-radius:999px;
+  color:var(--ink2)}
+
+.tour{display:flex; gap:6px; align-items:center; flex-wrap:wrap; padding:7px 20px;
+  border-bottom:1px solid var(--grid); background:var(--surface); font-size:12px}
+.tour a{color:var(--ink2); text-decoration:none; border:1px solid var(--grid);
+  border-radius:999px; padding:3px 11px}
+.tour a:hover{color:var(--ink); border-color:var(--ink2)}
+.qbar{display:flex; gap:22px; align-items:baseline; flex-wrap:wrap;
+  padding:9px 20px; border-bottom:1px solid var(--grid); background:var(--card); font-size:13.5px}
+.qbar .q{flex:1; min-width:320px}
+.qbar b{font-weight:650}
+
+.main{max-width:1760px; margin:0 auto; padding:15px 20px; display:flex;
+  flex-direction:column; gap:14px}
+.card{background:var(--card); border:1px solid var(--grid); border-radius:12px; padding:14px;
+  box-shadow:0 1px 3px rgba(11,11,11,.045)}
+.chipnum{font-size:10.5px; color:var(--ink2); font-variant-numeric:tabular-nums}
+.card h2{font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--ink2); margin-bottom:9px}
+.mainrow{display:grid; grid-template-columns:minmax(400px,47%) minmax(0,1fr); gap:16px;
+  position:relative; align-items:start}
+.botrow{display:grid; grid-template-columns:minmax(0,1fr) 440px; gap:16px; align-items:start}
+@media (max-width:1080px){ .mainrow,.botrow{grid-template-columns:1fr} }
+
+#imgwrap{position:relative; text-align:center}
+#imgcanvas{max-width:100%; max-height:74vh; width:auto; display:inline-block; border-radius:8px}
+#imgtip{position:absolute; pointer-events:none; background:var(--ink); color:var(--surface);
+  font-size:11px; padding:3px 7px; border-radius:6px; display:none; z-index:5; white-space:nowrap}
+.imghead{display:flex; align-items:center; gap:14px; margin-bottom:9px}
+.imghead h2{margin:0; flex:1}
+.imghead label{display:inline-flex; align-items:center; gap:6px; font-size:11px;
+  color:var(--ink2)}
+.imghead input[type=range]{width:90px; accent-color:var(--ink)}
+
+/* method chips */
+.chips{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.chip{display:inline-flex; align-items:center; gap:7px; padding:6px 12px; cursor:pointer;
+  border:1px solid var(--grid); border-radius:999px; background:var(--card)}
+.chip .dot{width:10px; height:10px; border-radius:3px}
+.chip.on{border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink)}
+.chip .ours{font-size:10px; color:var(--ink2); border:1px solid var(--grid);
+  border-radius:999px; padding:0 6px}
+.controls{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px;
+  padding-top:10px; border-top:1px dashed var(--grid)}
+.controls label{display:inline-flex; align-items:center; gap:6px; color:var(--ink2)}
+.controls input[type=range]{width:130px; accent-color:var(--ink)}
+.controls select{border:1px solid var(--grid); border-radius:6px; padding:3px 6px;
+  background:var(--card)}
+.switch{position:relative; width:34px; height:19px; border-radius:999px; background:var(--grid);
+  border:0; cursor:pointer; transition:background .15s}
+.switch.on{background:var(--ink)}
+.switch::after{content:""; position:absolute; top:2px; left:2px; width:15px; height:15px;
+  border-radius:50%; background:var(--card); transition:left .15s}
+.switch.on::after{left:17px}
+.hint{font-size:12px; color:var(--ink2)}
+.hint b{color:var(--ink)}
+
+/* token strip */
+#stripwrap{display:flex; gap:8px; align-items:stretch}
+#minimap{flex:0 0 16px; border-radius:4px; background:#f2f1ee; cursor:pointer}
+#strip{flex:1; min-width:0; line-height:2.1; word-break:break-word; max-height:520px;
+  overflow-y:auto; font-size:13.5px}
+#srcpanel{display:none; margin-top:10px; padding-top:8px; border-top:1px dashed var(--grid)}
+#srcpanel summary{cursor:pointer; font-size:12px; color:var(--ink2); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis}
+#srcpanel summary:hover{color:var(--ink)}
+#srcpanel summary b{color:var(--ink); font-weight:600}
+#srcpanel details[open] summary{margin-bottom:6px}
+#srcpanel .crumb{font-size:12.5px; line-height:2; margin-bottom:6px}
+#srcpanel .crumb .seg2{border:1px solid var(--grid); border-radius:6px; padding:1px 7px;
+  cursor:pointer; white-space:pre-wrap}
+#srcpanel .crumb .seg2:hover{border-color:var(--ink)}
+#srcpanel .crumb .wt{color:var(--ink2); font-size:10.5px; margin:0 4px}
+#srcpanel table{font-size:12px}
+#srcpanel td.bar div{height:7px; border-radius:3px}
+#srcpanel tr{cursor:pointer}
+#srcpanel tr:hover td{background:#f2f1ec}
+.tok{border-radius:4px; padding:1px 1px; cursor:pointer; white-space:pre-wrap}
+.tok:hover{outline:1.5px solid var(--ink)}
+.tok.removed{color:var(--ink2); text-decoration:line-through; background:transparent !important;
+  opacity:.5}
+.tok.anchor{outline:2.5px solid var(--ink); outline-offset:1px; border-radius:3px}
+.tok.answer{box-shadow:0 2px 0 0 var(--ink)}
+.tok.edgesrc{outline:1.5px dashed var(--ink2)}
+.sect{display:inline-block; margin:0 6px 0 2px; padding:0 8px; border:1px solid var(--grid);
+  border-radius:999px; font-size:11px; color:var(--ink2); vertical-align:baseline}
+#striplegend{display:flex; gap:16px; margin-top:9px; font-size:11px; color:var(--ink2);
+  flex-wrap:wrap}
+
+/* arcs overlay */
+#arcs{position:absolute; inset:0; pointer-events:none; z-index:20}
+
+/* deletion panel */
+#curvebox{position:relative}
+#curvetip{position:absolute; pointer-events:none; background:var(--ink); color:var(--surface);
+  font-size:11px; padding:4px 8px; border-radius:6px; display:none; z-index:5; white-space:nowrap}
+.scrub{display:flex; align-items:center; gap:12px; margin-top:8px}
+.scrub input[type=range]{flex:1; accent-color:var(--ink)}
+.scrub .val{min-width:280px; font-size:12px; color:var(--ink2); text-align:right}
+
+/* scoreboard */
+table{border-collapse:collapse; width:100%; font-size:12.5px}
+th,td{padding:4px 8px; text-align:right; border-bottom:1px solid var(--grid)}
+th{color:var(--ink2); font-weight:500; font-size:11px}
+td:first-child,th:first-child{text-align:left}
+tr.cur td{background:#f2f1ec}
+td .star{color:var(--ink); font-weight:700}
+td .dash{color:#b9b7b1}
+.unscored{color:#D55E00; font-weight:600}
+body.unscored-cell #imgwrap{outline:2px solid #D55E0055; outline-offset:3px}                       /* absent, not zero -- recede it */
+tfoot td{border-bottom:0; color:var(--ink2); font-size:11px; padding-top:8px; line-height:1.5}
+
+/* family grouping: the base name is printed once as a band, its variants step under it */
+tr.famrow td{padding:11px 8px 3px; border-bottom:0; font-weight:650; color:var(--ink);
+  font-size:11px; letter-spacing:.06em; text-transform:uppercase}
+tr.famrow:first-child td{padding-top:2px}
+tr.famrow .tag{font-size:9.5px; letter-spacing:.04em; text-transform:none; font-weight:600;
+  border:1px solid var(--grid); border-radius:999px; padding:1px 6px; margin-left:6px;
+  color:var(--ink2)}
+td.vname{padding-left:20px; color:var(--ink2)}
+tr.base td.vname{color:var(--ink)}            /* the rung the deltas are measured from */
+tr.ours td{font-weight:600}
+tbody tr:not(.famrow):hover td{background:#f7f6f2}
+
+/* vs raw: DIVERGING (better / neutral / worse), the one place polarity is the message.
+   BLUE/VERMILLION, NOT GREEN/RED. The obvious green-red pair fails CVD separation -- measured
+   ΔE 5.9 under protanopia against a floor of 8, i.e. the two deltas are the same colour to a
+   red-blind reader, which is the single most common form. This pair measures ΔE 21.9 protan /
+   30.9 tritan and passes every check on this surface. The sign character is a second, redundant
+   encoding, so the column still reads with colour off entirely. Neutral midpoint is ink2: a
+   change too small to matter should read as no change, not as a faint win. */
+th.vs,td.vs{border-left:1px solid var(--grid)}
+td .delta{font-variant-numeric:tabular-nums; font-size:11.5px}
+td .delta.up{color:#0072B2}                   /* helped its own base */
+td .delta.down{color:#D55E00}                 /* hurt it */
+td .delta.flat{color:var(--ink2); opacity:.65}
+
+/* compare */
+#compare{display:none}
+#compare .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(265px,1fr)); gap:14px}
+#compare .ccard{background:var(--card); border:1px solid var(--grid); border-radius:12px;
+  padding:12px; cursor:pointer}
+#compare .ccard:hover{border-color:var(--ink2)}
+#compare .ccard h3{display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:8px}
+#compare .ccard canvas{width:100%; border-radius:6px; display:block}
+#compare .nums{display:flex; gap:14px; margin-top:8px; font-size:12px; color:var(--ink2)}
+#compare .nums b{color:var(--ink); font-weight:650}
+
+/* picker drawer */
+#drawer{position:fixed; inset:0; background:rgba(11,11,11,.35); z-index:50; display:none}
+#drawer .panel{position:absolute; top:0; right:0; bottom:0; width:min(920px,94vw);
+  background:var(--surface); border-left:1px solid var(--grid); padding:18px 20px;
+  overflow-y:auto}
+#drawer .head{display:flex; gap:12px; align-items:center; margin-bottom:6px; flex-wrap:wrap}
+#drawer input[type=search]{flex:1; min-width:200px; padding:7px 12px;
+  border:1px solid var(--grid); border-radius:8px; background:var(--card)}
+#drawer select{border:1px solid var(--grid); border-radius:8px; padding:6px 8px;
+  background:var(--card)}
+#winrate{font-size:12px; color:var(--ink2); margin:2px 0 10px}
+.groupbar{display:flex; align-items:center; gap:14px; margin:0 0 14px; flex-wrap:wrap}
+.groupbar .seg button b{font-weight:650}
+.ratio{flex:1; min-width:140px; height:10px; border-radius:999px; overflow:hidden;
+  background:#e4b18f; display:flex}
+.ratio .ours{background:#2a78d6; height:100%}
+.ratio .close{background:#dcdbd6; height:100%}
+.samplegrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(195px,1fr)); gap:12px}
+.scard{border:1px solid var(--grid); border-radius:10px; overflow:hidden; cursor:pointer;
+  background:var(--card)}
+.scard:hover{border-color:var(--ink)}
+.scard img{width:100%; height:110px; object-fit:cover; display:block; background:#eee}
+.scard .cap{padding:7px 9px; font-size:11px; color:var(--ink2)}
+.scard .cap b{color:var(--ink); font-weight:600}
+.ctag{font-size:10px; border-radius:999px; padding:1px 7px; margin-left:5px}
+.ctag.win{background:#e3edfa; color:#1d5eae}
+.ctag.median{background:#eee; color:var(--ink2)}
+.ctag.loss{background:#fbe9e0; color:#b44a1d}
+.adv{font-size:10px; margin-left:5px}
+.flatchip{font-size:9px; margin-left:5px; padding:1px 4px; border-radius:3px;
+  background:#f0e0c8; color:#7a5c1e; border:1px solid #d8bc86; white-space:nowrap}
+.adv.pos{color:#1d5eae}
+.adv.neg{color:#b44a1d}
+#morebtn{margin:14px auto 4px; display:block}
+footer{padding:10px 20px 26px; color:var(--ink2); font-size:12px; max-width:1760px; margin:0 auto}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Attribution playground</h1>
+  <span class="badge" id="modelbadge"></span>
+  <div class="seg" id="dstabs"></div>
+  <button class="btn nav" id="prevbtn">‹</button>
+  <button class="btn" id="pickbtn">Sample: —</button>
+  <button class="btn nav" id="nextbtn">›</button>
+  <div class="spacer"></div>
+  <label class="hint">substrate</label>
+  <div class="seg" id="maskseg">
+    <button data-v="embed">embed</button><button data-v="blur" class="on">blur</button>
+  </div>
+  <span id="masknote" class="unscored" style="display:none; font-size:10px"></span>
+  <label class="hint">direction</label>
+  <div class="seg" id="modeseg">
+    <button data-v="deletion" class="on">deletion</button><button data-v="insertion">insertion</button>
+  </div>
+  <label class="hint">leg</label>
+  <div class="seg" id="legseg">
+    <button data-v="image" class="on">image</button><button data-v="joint">joint</button>
+  </div>
+  <label class="hint">group</label>
+  <div class="seg" id="okseg">
+    <button data-v="0" class="on">all</button><button data-v="1">✓ vs ✗</button>
+  </div>
+  <button class="btn" id="comparebtn">Compare all</button>
+  <button class="btn" id="copybtn">Copy link</button>
+  <button class="btn" id="exportbtn">PNG</button>
+</header>
+
+
+
+<div style="display:none"><span id="qtext"></span><b id="gold"></b><b id="pred"></b><b id="okbadge"></b></div>
+
+<div class="main">
+  <div class="card">
+    <div class="chips" id="chips"></div>
+    <div class="controls">
+      <label>Katz walk-sum <button class="switch" id="katzsw"></button></label>
+      <label>γ
+        <input type="range" id="gamma" min="0.1" max="1.5" step="0.05" value="1" list="gticks">
+        <datalist id="gticks"><option value="0.5"></option><option value="1"></option></datalist>
+        <span class="mono" id="gammaval">1.00</span></label>
+      <label>readout <select id="readout">
+        <option value="total">total (plain Katz)</option>
+        <option value="delta" selected>delta (node-deletion)</option>
+      </select></label>
+      <label>remove <input type="range" id="scrub2" min="0" max="20" step="1" value="4">
+        <span class="mono" id="scrub2val">20%</span></label>
+      <span class="hint" id="armhint"></span>
+    </div>
+  </div>
+
+  <div class="mainrow" id="mainrow">
+    <svg id="arcs"></svg>
+    <div class="card">
+      <div class="imghead">
+        <h2 id="imgtitle">Image</h2>
+        <label>vs <select id="diffsel"><option value="">—</option></select></label>
+        <label>overlay <input type="range" id="ovr" min="0" max="1" step="0.05" value="0.75"></label>
+      </div>
+      <div id="imgwrap"><canvas id="imgcanvas"></canvas><div id="imgtip"></div></div>
+      <div id="imglegend" class="hint" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="imghead">
+        <h2 id="striptitle">Text tokens</h2>
+        <label>arrows <input type="range" id="topk" min="3" max="30" step="1" value="10">
+          <span class="mono" id="topkval">10</span></label>
+        <label>hops <select id="hops">
+          <option value="1">1</option><option value="2">2</option>
+          <option value="3">3</option><option value="4">4</option>
+          <option value="input">→ input</option>
+        </select></label>
+        <button class="btn nav" id="jumpans">↧ answer</button>
+      </div>
+      <div id="stripwrap">
+        <canvas id="minimap" width="16"></canvas>
+        <div id="strip"></div>
+      </div>
+      <div id="striplegend"></div>
+      <div id="srcpanel"></div>
+    </div>
+  </div>
+
+  <div id="compare"><div class="grid" id="comparegrid"></div></div>
+
+  <div class="botrow">
+    <div class="card">
+      <div class="imghead">
+        <h2 id="curvehead">Deletion curve <small>— response retained after removing top-x% (MoRF), cached from the evaluation</small></h2>
+        <div class="seg" id="curveseg">
+          <button data-v="sample" class="on">this sample</button>
+          <button data-v="mean">dataset mean</button>
+        </div>
+        <label class="hint"><input type="checkbox" id="masband"> MAS band</label>
+      </div>
+      <div id="curvebox"><svg id="curve" width="100%" height="280"></svg><div id="curvetip"></div></div>
+      <div class="scrub">
+        <span class="hint" id="scrubverb">remove</span>
+        <input type="range" id="scrub" min="0" max="20" step="1" value="4">
+        <span class="val" id="scrubval"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h2 id="boardhead">Scoreboard — RISE / MAS <small>(deletion AUC, lower is better)</small></h2>
+      <table id="scoreboard"></table>
+    </div>
+  </div>
+</div>
+
+<div id="drawer"><div class="panel">
+  <div class="head">
+    <h1 style="flex:1">Pick a sample <small class="muted" id="pickcount"></small></h1>
+    <select id="sortsel">
+      <option value="default">order: dataset</option>
+      <option value="advdesc">order: ours advantage ↓</option>
+      <option value="advasc">order: ours advantage ↑</option>
+    </select>
+    <input type="search" id="search" placeholder="search question / qid / category…">
+    <button class="btn" id="closedrawer">Close</button>
+  </div>
+  <p id="winrate"></p>
+  <div class="groupbar">
+    <div class="seg" id="groupseg">
+      <button data-v="all" class="on">All</button>
+      <button data-v="win">Ours wins</button>
+      <button data-v="close">Close calls</button>
+      <button data-v="loss">Baseline wins</button>
+    </div>
+    <div class="seg" id="okfilter">
+      <button data-v="all" class="on">all</button>
+      <button data-v="ok">✓ correct</button>
+      <button data-v="bad">✗ incorrect</button>
+    </div>
+    <div class="ratio" id="ratiobar"></div>
+    <span class="hint" id="ratiolbl"></span>
+  </div>
+  <div class="samplegrid" id="samplegrid"></div>
+  <button class="btn" id="morebtn">Show more</button>
+</div></div>
+
+<footer>
+  Every number and curve on this page is read from the cached evaluation (bundles, W-cache,
+  records.jsonl) — no model runs. Heatmap and token shading are the selected method's
+  attribution, normalised per family (image / text). RISE = AUC of the deletion curve;
+  MAS adds the mass-alignment penalty |MR−DR|. γ is recomputed live from the cached edge
+  matrix; metrics snap to the nearest evaluated γ ∈ {0.5, 1}. Δ on a sample card is
+  min-RISE(all baseline arms) − min-RISE(ours), image leg: positive = ours beats every
+  baseline on that sample.
+</footer>
+
+<script>
+"use strict";
+// Slots are assigned by ENTITY and never cycled; the first five are the paper palette
+// (make_figures.py). The four literature baselines got the next four hues, validated with
+// the dataviz palette checker in CHIP-ADJACENCY order (worst adjacent pair ΔE 7.8 protan —
+// inside the 6–8 band that is legal with direct labels, which every series here carries;
+// normal-vision floor 18.6). NOTE: heta took the magenta slot, so if pnocal (hidden,
+// #c0417a) ever returns it needs a new hue — re-run the validator before picking one.
+const COLOR = {cane:"#2a78d6", mredm1:"#2a78d6", pnocal:"#c0417a", saem:"#1baf7a",
+               ifr:"#eb6834", flowtracer:"#eda100", flashtrace:"#8b5fc9",
+               rollout:"#189bc4", attnlrp:"#c0504d", reagent:"#5865c9", heta:"#c766b4",
+               posnull:"#8a8880"};
+// `mredm1` was this list's name for CANE until 2026-08-11. They are one method -- cane.py is the
+// mre chain rewritten as a single module -- and the cache was relabelled to cane, which now holds
+// the full 772/968/1490 coverage. mredm1 stays in COLOR and in app.py's ARM_ROWS so run dirs
+// written before the relabel still draw. `pnocal` is hidden for a different reason: its cache is
+// cold on all three datasets, so the only thing it can render is the "no cached scores"
+// placeholder. Put it back once scripts/build_w.sh has warmed it -- and watch the index-time
+// coverage warning when you do, because a HALF-warm method caps the browsable corpus.
+/* Ours first, then the published baselines in the order the tables list them, then the control.
+   rollout/attnlrp/reagent/heta were missing here as well as from app.METHODS, so even once their
+   records existed the selector had nowhere to put them. Any name absent from the server's method
+   list is skipped, so listing heta before its scoring pass lands costs nothing. */
+// FlashTrace sits between IFR and FlowTracer ON PURPOSE: orange #eb6834 next to yellow
+// #eda100 is below the normal-vision separation floor (ΔE 13.7 — the validator flags it),
+// and the purple between them fixes the adjacency without touching the paper's colours.
+const ORDERED_ALL = ["cane","ifr","flashtrace","flowtracer","rollout","attnlrp","reagent","heta"];
+let ORDERED = ORDERED_ALL;
+// Score-only methods have no edge matrix, so the arc overlay borrows one. Named once: the
+// label that tells the reader whose edges they are must not drift from the fetch that used them.
+const EDGE_FALLBACK = "ifr";
+/* blur is the default substrate: it is what the v6 campaign scored, and the substrate every
+   dataset on this machine actually carries records for. */
+const S = {ds:"mmstar", qid:null, mask:"blur", mode:"deletion", leg:"image", method:"cane",
+           katz:true, gamma:1.0, readout:"delta", step:4, anchor:null, span:null, pinned:false, masband:false,
+           overlay:0.75, topk:10, hops:"1", curveview:"sample", diffB:null,
+           oksplit:false,
+           index:null, sample:null, records:null, scores:{}, img:null, compare:false};
+
+/* Which direction of RISE/MAS counts as better in the CURRENT mode. Everything that sorts,
+   ranks or colours a score must go through these two, never through a literal "lower wins":
+   deletion and insertion disagree on the sign, and a hardcoded comparison silently inverts the
+   whole scoreboard the moment you flip the toggle. Server ships S.index.better. */
+const betterIsLower = () => ((S.index && S.index.better) || {})[S.mode] !== "higher";
+/* Records are per (substrate, direction), so every fetch of them carries both. */
+const recordURL = (ds, qid) => `/api/record/${ds}/${qid}?mask=${S.mask}&mode=${S.mode}`;
+/* Substrate-availability note: when the selected substrate has zero recorded bundles for the
+   dataset on screen, say so next to the toggle -- an empty cell rendered without comment reads
+   as "the methods scored nothing" rather than "this campaign never ran that substrate". */
+function maskNote(){
+  const n = ((S.index && S.index.substrates || {})[S.ds] || {})[S.mask] || 0;
+  const el = $("masknote");
+  if (n){ el.style.display = "none"; el.textContent = ""; return; }
+  el.style.display = "";
+  el.textContent = `no ${S.mask} evaluation for ${S.ds}` +
+    (S.mask === "embed" ? " — the v6 campaign scored blur only" : "");
+}
+
+/* Every deletion-worded label in one place. Flipping the toggle without flipping these leaves a
+   page that says "removing top-x%" over a curve that is restoring them — the failure mode is a
+   confidently mislabelled screenshot, so the wording is derived, never typed twice. */
+/* What the ✕ / strikethrough marks. Deletion ablates the selected top-x%; insertion ablates
+   everything EXCEPT them, so the same glyph needs the opposite word. */
+const ablWord = () => S.mode === "deletion" ? "removed" : "still ablated";
+function retitleForMode(){
+  const del = S.mode === "deletion";
+  $("curvehead").innerHTML = del
+    ? `Deletion curve <small>— response retained after removing top-x% (MoRF), cached from the evaluation</small>`
+    : `Insertion curve <small>— response recovered after restoring top-x% (MoRF) into a fully ablated input, cached from the evaluation</small>`;
+  $("boardhead").innerHTML = del
+    ? `Scoreboard — RISE / MAS <small>(deletion AUC, lower is better)</small>`
+    : `Scoreboard — RISE / MAS <small>(insertion AUC, higher is better)</small>`;
+  $("scrubverb").textContent = del ? "remove" : "restore";
+}
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const fmtG = g => String(Math.round(g*100)/100);
+
+/* ---- static-export shim (GitHub Pages): no server, payloads live under data/ ---- */
+const STATIC_MANIFEST = fetch('data/static_manifest.json').then(r => r.json());
+const _BULK = {};
+function staticPath(p){
+  p = p.replace(/^\/api\//, '').replace(/[?&=]/g, '_');
+  return 'data/' + p + (p.startsWith('image/') ? '.png' : '.json');
+}
+async function staticFetch(p, _opts){
+  if (p.startsWith('/api/edges/')){          // hover-flow: slice the bulk adjacency
+    const u = new URL(p, location.href); const q = u.searchParams;
+    const [ds, qid, method] = u.pathname.split('/').slice(3);
+    const man = await STATIC_MANIFEST;
+    const katz = q.get('katz') === '1' ? 1 : 0;
+    let g = '1';
+    if (katz){
+      const want = +(q.get('gamma') || 1);
+      g = man.gammas.reduce((a, b) => Math.abs(+b - want) < Math.abs(+a - want) ? b : a);
+    }
+    const key = `${ds}/${qid}/${method}_katz_${katz}_gamma_${g}_topk_${man.edge_topk}`;
+    if (!(key in _BULK))
+      _BULK[key] = fetch('data/edgesbulk/' + key + '.json')
+        .then(r => r.ok ? r.json() : {mode: 'none', anchors: {}});
+    const bulk = await _BULK[key];
+    const col = (bulk.anchors || {})[q.get('anchor')] || [];
+    const k = Math.max(1, +(q.get('topk') || 10));
+    return {ok: true, json: async () => ({edges: col.slice(0, k), mode: bulk.mode})};
+  }
+  let r = await fetch(staticPath(p));
+  if (!r.ok){
+    const man = await STATIC_MANIFEST;
+    const u = new URL(p, location.href); const q = u.searchParams;
+    if (q.has('gamma')){
+      const g = +q.get('gamma');
+      q.set('gamma', man.gammas.reduce((a, b) => Math.abs(+b - g) < Math.abs(+a - g) ? b : a));
+      if (q.has('readout')) q.set('readout', man.readouts[0]);
+      r = await fetch(staticPath(u.pathname + '?' + q.toString()));
+    }
+  }
+  if (!r.ok) return {json: async () => ({error: 'not in this static demo (live-server feature)'})};
+  return r;
+}
+addEventListener('DOMContentLoaded', () => {   // demo chrome: results only, no mechanics
+  const t = document.getElementById('scoreboard');
+  if (t && t.closest('.card')) t.closest('.card').style.display = 'none';
+  const ok = document.getElementById('okfilter');
+  if (ok){ ok.style.display = 'none';
+           if (ok.previousElementSibling) ok.previousElementSibling.style.display = 'none'; }
+  for (const id of ['maskseg','masknote','okseg','copybtn','exportbtn','striplegend','armhint'])
+    { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
+  document.querySelectorAll('header label').forEach(l => {
+    const t2 = l.textContent.trim();
+    if (t2 === 'substrate' || t2 === 'group') l.style.display = 'none';
+    if (t2 === 'leg') l.textContent = 'variant';
+  });
+  document.querySelectorAll('.controls > label').forEach(l => {
+    if (l.querySelector('#katzsw, #gamma, #readout')) l.style.display = 'none';
+  });
+});
+const api = async p => { const r = await staticFetch(p); const j = await r.json();
+  if (!r.ok) throw new Error(j.error || r.status); return j; };
+
+function methodMeta(m){ return S.index.methods.find(x => x.id === m); }
+function hasW(m){ return methodMeta(m).has_w; }
+function hasEdges(m){ const x = methodMeta(m); return !!(x.edges || x.has_w); }
+/* Snap to the SERVER's cached-gamma canon (served in /api/index), not a hardcoded pair: the
+   server snaps /api/scores the same way, and two different snap sets meant the armhint could
+   name ifr:katz_g0.3 while every record lookup here keyed ifr:katz_g0.5. */
+function snapG(g){
+  const gs = (S.index && S.index.gammas_cached) || [0.5, 1];
+  return gs.reduce((a, b) => Math.abs(b - g) < Math.abs(a - g) ? b : a);
+}
+function armOf(m){
+  if (m === "posnull") return "posnull:g0.5";
+  if (!S.katz || !hasW(m)) return m + ":raw";
+  return `${m}:${S.readout === "delta" ? "katzdel" : "katz"}_g${fmtG(snapG(S.gamma))}`;
+}
+function scoreKey(m){ return [m, S.katz && hasW(m) ? 1 : 0, fmtG(S.gamma), S.readout].join("|"); }
+async function getScores(m){
+  const k = `${S.ds}|${S.qid}|${scoreKey(m)}`;
+  if (!S.scores[k]) S.scores[k] = await api(
+    `/api/scores/${S.ds}/${S.qid}/${m}?katz=${S.katz && hasW(m) ? 1 : 0}` +
+    `&gamma=${S.gamma}&readout=${S.readout}`);
+  return S.scores[k];
+}
+function selectedSet(sc){    // the top-x% by rank at the current step -- SAME set in both modes
+  if (!S.step) return new Set();
+  const ends = sc.step_ends[S.leg], order = sc.order[S.leg];
+  const n = ends[Math.min(S.step, ends.length) - 1];
+  return new Set(order.slice(0, n));
+}
+/* Positions currently ABLATED, which is what the struck-through styling means everywhere.
+   The two modes walk the same ranking but sit on opposite sides of it: deletion has ablated the
+   selected top-x%, insertion has RESTORED exactly those and ablated all the rest. Marking the
+   selected set in both would draw insertion's picture inside out — the tokens the method called
+   most important would be shown as the missing ones, which is the reading a screenshot would
+   carry away. */
+function removedSet(sc){
+  const sel = selectedSet(sc);
+  if (S.mode === "deletion") return sel;
+  const all = sc.order[S.leg] || [];
+  return new Set(all.filter(p => !sel.has(p)));
+}
+
+function readURL(){
+  const p = new URLSearchParams(location.search);
+  for (const k of ["ds", "qid", "mask", "mode", "leg", "method", "readout"])
+    if (p.get(k)) S[k] = p.get(k);
+  if (p.get("katz")){ S.katz = p.get("katz") === "1"; S._katzURL = true; }
+  if (p.get("gamma")) S.gamma = +p.get("gamma");
+  if (p.get("step")) S.step = Math.max(0, Math.min(20, +p.get("step")));
+  if (p.get("compare")) S.compare = p.get("compare") === "1";
+  if (p.get("oksplit")) S.oksplit = p.get("oksplit") === "1";
+  if (p.get("topk")) S.topk = Math.max(3, Math.min(30, +p.get("topk")));
+  if (p.get("hops")) S.hops = ["2", "3", "4", "input"].includes(p.get("hops")) ? p.get("hops") : "1";
+  if (p.get("curveview") === "mean") S.curveview = "mean";
+  if (p.get("masband")) S.masband = p.get("masband") === "1";
+  if (p.get("diff")) S.diffB = p.get("diff");
+  return {anchor: p.get("anchor"), span: p.get("span"), drawer: p.get("drawer") === "1"};
+}
+function writeURL(){
+  const p = new URLSearchParams({ds: S.ds, qid: S.qid || "", mask: S.mask, mode: S.mode,
+    leg: S.leg, method: S.method, katz: S.katz ? 1 : 0, gamma: fmtG(S.gamma), readout: S.readout,
+    step: S.step, compare: S.compare ? 1 : 0, topk: S.topk, hops: S.hops,
+    oksplit: S.oksplit ? 1 : 0,
+    curveview: S.curveview, masband: S.masband ? 1 : 0});
+  if (S.diffB) p.set("diff", S.diffB);
+  if (S.pinned && S.anchor != null) p.set("anchor", S.anchor);
+  if (S.pinned && S.span) p.set("span", S.span.join("-"));
+  history.replaceState(null, "", "?" + p);
+}
+
+/* ---------------------------------------------------------------- boot */
+(async function init(){
+  const url = readURL(), urlAnchor = url.anchor;   // capture BEFORE writeURL rewrites the query
+  S.index = await api("/api/index");
+  ORDERED = ORDERED_ALL.filter(m => S.index.methods.some(x => x.id === m));
+  // A URL outlives the build that wrote it. readURL takes ds/method/diff verbatim, so a bookmark
+  // naming something this index no longer carries -- a retired method, or one of the two
+  // dashboards' method sets before they were unified (cane/pnocal vs mredm1/saem) -- makes
+  // methodMeta() return undefined and every .label / .has_w read throw before the first paint.
+  // Validated once here rather than at the fourteen call sites, because they all route through
+  // this state and a stale param is the only way a bad id gets in.
+  const known = new Set(S.index.methods.map(m => m.id));
+  if (!known.has(S.method)) S.method = ORDERED.find(m => known.has(m));
+  if (S.diffB && !known.has(S.diffB)) S.diffB = null;
+  if (!(S.ds in S.index.datasets)) S.ds = Object.keys(S.index.datasets)[0];
+  $("modelbadge").textContent = S.index.model;
+  const tabs = $("dstabs");
+  for (const ds of Object.keys(S.index.datasets)){
+    const b = document.createElement("button");
+    b.textContent = ds; b.dataset.v = ds;
+    b.onclick = () => { S.ds = ds; segSync(tabs, ds); maskNote(); openDrawer(); };
+    tabs.appendChild(b);
+  }
+  segSync(tabs, S.ds);
+  segSync($("maskseg"), S.mask); segSync($("modeseg"), S.mode); segSync($("legseg"), S.leg);
+  segSync($("okseg"), S.oksplit ? "1" : "0");
+  $("okseg").onclick = e => {
+    const v = e.target.dataset && e.target.dataset.v;
+    if (v == null) return;
+    S.oksplit = v === "1"; segSync($("okseg"), v);
+    renderScoreboard(); writeURL();
+  };
+  // A substrate with zero recorded bundles on EVERY dataset (embed on this machine: v6 never
+  // ran it and the legacy embed dirs are archived) is disabled outright -- clicking it could
+  // only ever produce the "no evaluation" note, and on a config whose RUNS lacks the key
+  // (internvl35) the server rejects the mask parameter anyway.
+  for (const b of $("maskseg").querySelectorAll("button")){
+    const dead = !Object.values(S.index.substrates || {}).some(per => per[b.dataset.v]);
+    b.disabled = dead;
+    if (dead) b.title = `no ${b.dataset.v} records on this machine`;
+  }
+  maskNote();
+  $("gamma").value = S.gamma; $("gammaval").textContent = S.gamma.toFixed(2);
+  $("readout").value = S.readout; $("scrub").value = S.step;
+  $("scrub2").value = S.step; $("scrub2val").textContent = `${S.step * 5}%`;
+  $("topk").value = S.topk; $("topkval").textContent = S.topk; $("hops").value = S.hops;
+  segSync($("curveseg"), S.curveview);
+  buildChips();
+  if (!S._katzURL && hasW(S.method)) S.katz = katzDefault(S.method);
+  wireControls();
+  const list = S.index.datasets[S.ds];
+  const pick = (S.qid && list.find(s => s.qid === S.qid)) ||
+               list.find(s => s.curated === "win") || list[0];
+  await selectSample(S.ds, pick.qid);
+  if (urlAnchor != null){
+    S.pinned = true;
+    if (url.span){
+      const [a, b] = url.span.split("-").map(Number);
+      if (isFinite(a) && isFinite(b)) S.span = [Math.min(a, b), Math.max(a, b)];
+    }
+    const el = document.querySelector(`.tok[data-p="${+urlAnchor}"]`), st = $("strip");
+    if (el) st.scrollTop = Math.max(0, el.getBoundingClientRect().top -
+      st.getBoundingClientRect().top + st.scrollTop - st.clientHeight / 2);
+    hoverAnchor(+urlAnchor, true);
+  }
+  $("strip").addEventListener("scroll", () => { redrawArcs(); renderMinimap(S._sc); });
+  window.addEventListener("resize", () => { redrawArcs(); renderMinimap(S._sc); });
+  $("minimap").onclick = e => {
+    if (!S.sample || !S._sc) return;
+    const r = e.target.getBoundingClientRect();
+    const disp = dispPositions();
+    const k = Math.max(0, Math.min(disp.length - 1,
+      Math.floor(disp.length * (e.clientY - r.top) / r.height)));
+    scrollToPos(disp[k]);
+  };
+  $("jumpans").onclick = () => {
+    if (S.sample) scrollToPos(S.sample.n_input + S.sample.answer_seg[0]);
+  };
+  if (S.compare){ S.compare = false; $("comparebtn").click(); }
+  if (url.drawer) openDrawer();
+})().catch(e => { document.body.insertAdjacentHTML("beforeend",
+  `<pre style="color:#b00;padding:20px">${esc(String(e))}</pre>`); });
+
+function segSync(seg, v){
+  for (const b of seg.querySelectorAll("button")) b.classList.toggle("on", b.dataset.v === v);
+}
+
+function buildChips(){
+  const box = $("chips"); box.innerHTML = "";
+  for (const m of ORDERED){
+    const meta = methodMeta(m);
+    const c = document.createElement("button");
+    c.className = "chip"; c.dataset.m = m;
+    c.innerHTML = `<span class="dot" style="background:${COLOR[m]}"></span>${esc(meta.label)}` +
+      (meta.ours ? `<span class="ours">ours</span>` : "");
+    if (meta.note) c.title = meta.note;
+    c.onclick = () => {
+      // Per-method Katz default on SWITCH only: the walk-sum is the contribution, so ours
+      // (SAE-M) lands with it on and EVERY baseline lands raw — matching the arm policy the
+      // campaigns actually score. Toggling by hand while staying on a method is respected.
+      if (m !== S.method && hasW(m)) S.katz = katzDefault(m);
+      S.method = m; refresh();
+    };
+    box.appendChild(c);
+  }
+}
+const katzDefault = m => hasW(m) && !!methodMeta(m).ours;
+
+function wireControls(){
+  $("katzsw").onclick = () => { S.katz = !S.katz; refresh(); };
+  $("gamma").oninput = e => { S.gamma = +e.target.value;
+    $("gammaval").textContent = (+e.target.value).toFixed(2); };
+  $("gamma").onchange = () => refresh();
+  $("readout").onchange = e => { S.readout = e.target.value; refresh(); };
+  $("ovr").oninput = e => { S.overlay = +e.target.value; repaintImage(); };
+  $("diffsel").onchange = e => { S.diffB = e.target.value || null; repaintImage(); writeURL(); };
+  $("masband").checked = S.masband;
+  $("masband").onchange = e => { S.masband = e.target.checked; renderCurve(); renderStep(); writeURL(); };
+  $("curveseg").onclick = async e => {
+    const v = e.target.dataset.v;
+    if (!v) return;
+    S.curveview = v; segSync($("curveseg"), v);
+    if (v === "mean") S._meansCur = await fetchMeans();
+    renderCurve(); renderStep(); writeURL();
+  };
+  $("copybtn").onclick = async () => {
+    try { await navigator.clipboard.writeText(location.href); } catch (e) { /* http remote */ }
+    $("copybtn").textContent = "✓ copied";
+    setTimeout(() => $("copybtn").textContent = "Copy link", 1200);
+  };
+  $("exportbtn").onclick = () => exportPNG().catch(e => alert("export failed: " + e));
+  $("topk").oninput = e => { S.topk = +e.target.value; $("topkval").textContent = S.topk; };
+  $("topk").onchange = () => { if (S.anchor != null) hoverAnchor(S.anchor, true); writeURL(); };
+  $("hops").onchange = e => { S.hops = e.target.value;
+    if (S.anchor != null) hoverAnchor(S.anchor, true); writeURL(); };
+  for (const [seg, key] of [[$("maskseg"), "mask"], [$("modeseg"), "mode"], [$("legseg"), "leg"]])
+    seg.onclick = async e => {
+      if (!e.target.dataset.v) return;
+      S[key] = e.target.dataset.v; segSync(seg, S[key]);
+      maskNote();
+      // Both substrate and direction change WHICH records describe this sample, so refetch.
+      // The leg does not: one record carries both legs.
+      if (key === "mask" || key === "mode") S.records = await api(recordURL(S.ds, S.qid));
+      refresh();
+      // All three of these change which Δ a card reads, so an open drawer must re-count its
+      // win/close/loss shelves rather than keep showing the cell you switched away from.
+      if ($("drawer").style.display === "block") renderSampleGrid();
+    };
+  $("scrub").oninput = e => { S.step = +e.target.value; renderStep(); };
+  $("scrub2").oninput = e => { S.step = +e.target.value; renderStep(); };
+  $("pickbtn").onclick = openDrawer;
+  $("prevbtn").onclick = () => stepSample(-1);
+  $("nextbtn").onclick = () => stepSample(1);
+  $("closedrawer").onclick = () => $("drawer").style.display = "none";
+  $("drawer").onclick = e => { if (e.target === $("drawer")) $("drawer").style.display = "none"; };
+  $("search").oninput = () => { _shown = LIMIT; renderSampleGrid(); };
+  $("sortsel").onchange = () => { _shown = LIMIT; renderSampleGrid(); };
+  $("morebtn").onclick = () => { _shown += LIMIT; renderSampleGrid(); };
+  $("comparebtn").onclick = () => { S.compare = !S.compare; renderCompare(); };
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") return;
+    if (e.key === "ArrowRight"){ S.step = Math.min(20, S.step + 1); renderStep(); }
+    if (e.key === "ArrowLeft"){ S.step = Math.max(0, S.step - 1); renderStep(); }
+    if (e.key === "n") stepSample(1);
+    if (e.key === "p") stepSample(-1);
+  });
+}
+
+function stepSample(d){
+  const list = S.index.datasets[S.ds];
+  const i = list.findIndex(s => s.qid === S.qid);
+  const nxt = list[(i + d + list.length) % list.length];
+  selectSample(S.ds, nxt.qid);
+}
+
+/* ---------------------------------------------------------------- sample picker */
+const LIMIT = 120;
+const CLOSE_EPS = 0.01;                         // |Δ| ≤ this = a close call
+let _shown = LIMIT, _group = "all", _okfilter = "all";
+const ADV_FIELD = {"embed|deletion|image": "adv",   "embed|deletion|joint": "advj",
+                   "embed|insertion|image": "advi", "embed|insertion|joint": "advji",
+                   "blur|deletion|image": "badv",   "blur|deletion|joint": "badvj",
+                   "blur|insertion|image": "badvi", "blur|insertion|joint": "badvji"};
+/* Margin of ours over the best baseline for the CURRENT (substrate, mode, leg). The substrate is
+   part of the key because it did not used to be: every card carried the embed Δ whatever cell was
+   on screen, so a blur card could read -0.836 for a bundle blur scores at -0.033. The server
+   orients each one so positive always means ours won, so nothing here needs the sign convention. */
+const advOf = s => s[ADV_FIELD[`${S.mask}|${S.mode}|${S.leg}`]];
+/* Substituting the whole image leaves p(answer) where it started, so RISE's endpoint
+   normalisation divides by the noise floor. Every arm's score on such a bundle is noise. */
+const FLAT_FIELD = {"embed|deletion": "flat", "embed|insertion": "flati",
+                    "blur|deletion": "bflat", "blur|insertion": "bflati"};
+const isFlat = s => !!s[FLAT_FIELD[`${S.mask}|${S.mode}`]];
+const groupOf = s => {
+  const a = advOf(s);
+  if (a == null) return null;
+  return a > CLOSE_EPS ? "win" : a < -CLOSE_EPS ? "loss" : "close";
+};
+function openDrawer(){
+  $("drawer").style.display = "block";
+  _shown = LIMIT;
+  const st = (S.index.stats || {})[S.ds];
+  $("winrate").textContent = st ? `Δ on each card = the best BASELINE at :raw — the method as ` +
+    `published — against CANE, also at :raw. One arm each side, no per-sample arm picking: ` +
+    `letting ours field its best of six was worth 6–15 points of win rate that the baselines ` +
+    `never got. SAE-M still shows as ours, it just does not decide these shelves. Baselines are ` +
+    `NOT given the Katz walk-sum here: those arms are a fairness control and stay in the tables, ` +
+    `but arming a baseline with our own readout and scoring us against it filed clear wins ` +
+    `under "baseline wins". ` +
+    `Deletion takes the lowest RISE on each side, insertion the highest, sign flipped so ` +
+    `positive always means ours won. Cards marked "no image effect" are bundles where ` +
+    `substituting the WHOLE image barely moves p(answer) — RISE there is normalised by the ` +
+    `noise floor, so no arm's score on them means anything. Computed on the cell you have ` +
+    `selected (now: ${S.mask} / ${S.mode}, ${S.leg} leg); switch substrate, mode or leg and the ` +
+    `groups re-count.` : "";
+  const seg = $("groupseg");
+  seg.onclick = e => {
+    const v = e.target.closest("button")?.dataset.v;
+    if (!v) return;
+    _group = v; segSync(seg, v); _shown = LIMIT;
+    if (v === "win") $("sortsel").value = "advdesc";
+    if (v === "loss") $("sortsel").value = "advasc";
+    renderSampleGrid();
+  };
+  segSync(seg, _group);
+  const okf = $("okfilter");
+  okf.onclick = e => {
+    const v = e.target.closest("button")?.dataset.v;
+    if (!v) return;
+    _okfilter = v; segSync(okf, v); _shown = LIMIT;
+    renderSampleGrid();
+  };
+  segSync(okf, _okfilter);
+  renderSampleGrid();
+}
+function renderGroupCounts(base){
+  // Faceted counts: each filter row is counted under the OTHER filter's selection (and the
+  // search box), so clicking "Ours wins" re-counts ✓/✗ inside that group and vice versa.
+  base = base || S.index.datasets[S.ds];
+  const inOk = s => _okfilter === "all" || (_okfilter === "ok" ? s.ok === true : s.ok === false);
+  const inGroup = s => _group === "all" || groupOf(s) === _group;
+  const gpop = base.filter(inOk);                 // population the group tabs describe
+  const n = {all: 0, win: 0, close: 0, loss: 0};
+  for (const s of gpop){ const g = groupOf(s); if (g){ n.all++; n[g]++; } }
+  const lbl = {all: "All", win: "Ours wins", close: "Close calls", loss: "Baseline wins"};
+  for (const b of $("groupseg").querySelectorAll("button"))
+    b.innerHTML = `${lbl[b.dataset.v]} <b>${n[b.dataset.v]}</b>`;
+  const opop = base.filter(inGroup);              // population the ✓/✗ tabs describe
+  const ok = opop.filter(s => s.ok === true).length,
+        bad = opop.filter(s => s.ok === false).length;
+  const oklbl = {all: `all ${opop.length}`, ok: `✓ correct ${ok}`, bad: `✗ incorrect ${bad}`};
+  for (const b of $("okfilter").querySelectorAll("button"))
+    b.textContent = oklbl[b.dataset.v];
+  const pw = n.all ? 100 * n.win / n.all : 0, pc = n.all ? 100 * n.close / n.all : 0;
+  $("ratiobar").innerHTML = `<div class="ours" style="width:${pw}%"></div>` +
+    `<div class="close" style="width:${pc}%"></div>`;
+  $("ratiobar").title = `ours ${n.win} · close ${n.close} · baseline ${n.loss}`;
+  $("ratiolbl").textContent = `ours ${pw.toFixed(0)}% · close ${pc.toFixed(0)}% · ` +
+    `baseline ${(100 - pw - pc).toFixed(0)}% of ${n.all} (${S.leg} leg, |Δ|≤${CLOSE_EPS} = close)`;
+}
+function sampleCard(s){
+  const d = document.createElement("div"); d.className = "scard";
+  const a = advOf(s);
+  const adv = a != null ? `<span class="adv ${a > 0 ? "pos" : "neg"}">Δ${
+    S.leg === "joint" ? "joint" : "img"} ${a > 0 ? "+" : ""}${a.toFixed(3)}</span>` : "";
+  const flat = isFlat(s) ? `<span class="flatchip">no image effect</span>` : "";
+  const okm = s.ok === true ? ' <span style="color:#1d7a4f">✓</span>'
+            : s.ok === false ? ' <span style="color:#b44a1d">✗</span>' : "";
+  d.innerHTML = `<img loading="lazy" src="data/image/${S.ds}/${s.qid}.png">
+    <div class="cap"><b>${esc(s.qid)}</b>${okm}${adv}${flat}
+    <br>${esc(s.q || "")}<br><span class="mono">T=${s.T}${s.cat ? " · " + esc(s.cat) : ""}</span></div>`;
+  d.onclick = () => { $("drawer").style.display = "none"; selectSample(S.ds, s.qid); };
+  return d;
+}
+function renderSampleGrid(){
+  const box = $("samplegrid"), qtext = ($("search").value || "").toLowerCase();
+  const all = S.index.datasets[S.ds];
+  const base = all.filter(s => !qtext || s.qid.toLowerCase().includes(qtext) ||
+    (s.q || "").toLowerCase().includes(qtext) || (s.cat || "").toLowerCase().includes(qtext));
+  renderGroupCounts(base);
+  let hit = base;
+  if (_group !== "all") hit = hit.filter(s => groupOf(s) === _group);
+  if (_okfilter === "ok") hit = hit.filter(s => s.ok === true);
+  if (_okfilter === "bad") hit = hit.filter(s => s.ok === false);
+  const sort = $("sortsel").value;
+  // Sorting uses advOf, so it follows the mode/leg toggles instead of always ranking the
+  // deletion image leg. Both margins are pre-oriented, so bigger is always "ours won by more".
+  if (sort === "advdesc") hit = hit.slice().sort((a, b) => (advOf(b) ?? -1e9) - (advOf(a) ?? -1e9));
+  if (sort === "advasc") hit = hit.slice().sort((a, b) => (advOf(a) ?? 1e9) - (advOf(b) ?? 1e9));
+  $("pickcount").textContent = `— ${hit.length} of ${all.length}`;
+  box.innerHTML = "";
+  for (const s of hit.slice(0, _shown)) box.appendChild(sampleCard(s));
+  $("morebtn").style.display = hit.length > _shown ? "block" : "none";
+  $("morebtn").textContent = `Show ${Math.min(LIMIT, hit.length - _shown)} more (${_shown} of ${hit.length} shown)`;
+}
+
+/* ---------------------------------------------------------------- mean curves + helpers */
+async function fetchMeans(){
+  const k = `${S.ds}|${S.mask}|${S.mode}`;
+  S._means = S._means || {}; S._splits = S._splits || {};
+  if (!S._means[k]){
+    const j = await api(`/api/meancurves/${S.ds}?mask=${S.mask}&mode=${S.mode}`);
+    S._means[k] = j.legs;
+    S._splits[k] = j.split || {};
+  }
+  S._splitCur = S._splits[k] || {};
+  return S._means[k];
+}
+// The arm the CURRENT CELL actually carries for method m, which is not always the one the katz
+// and gamma controls ask for. The 2026-08 arm policy scores baselines raw-only and saem at gamma
+// 0.5, so a blur/insertion cell has ifr:raw but no ifr:katzdel_g1 -- and with katz toggled on the
+// viewer asked for the arm that does not exist and drew nothing. IFR, FlowTracer and SAE-M went
+// blank while CANE and FlashTrace (no edge matrix, so always :raw) displayed normally, which reads
+// as "those methods failed" rather than "this cell has no katz arm". Fall back within the family,
+// nearest first, and tell the caller it substituted so the UI can say so.
+function armAvail(m, pool){
+  const want = armOf(m);
+  const A = pool || (S.records && S.records.arms) || {};
+  if (A[want]) return {arm: want, fell_back: false};
+  for (const alt of [`${m}:katzdel_g0.5`, `${m}:katz_g0.5`, `${m}:raw`])
+    if (A[alt]) return {arm: alt, fell_back: alt !== want};
+  return {arm: want, fell_back: false};
+}
+
+function curveRec(m){                         // per-arm curve for the active curve view
+  if (S.curveview === "mean"){
+    const pool = (S._meansCur || {})[S.leg] || {};
+    const e = pool[armAvail(m, pool).arm];
+    return e ? {MR: e.mr, DR: e.dr, rise: e.rise, mas: e.mas, n: e.n} : null;
+  }
+  return armRec(armAvail(m).arm);
+}
+async function repaintImage(){
+  const sc = await getScores(S.method);
+  const scB = (S.diffB && S.diffB !== S.method) ? await getScores(S.diffB) : null;
+  renderImage(sc, scB);
+}
+
+/* ---------------------------------------------------------------- selection + refresh */
+function showLoadError(what, e){
+  $("pickbtn").textContent = `Sample: ${S.qid || "—"}`;
+  $("armhint").innerHTML = `<span style="color:#b44a1d">${esc(what)}: ${esc(String(e.message || e))}
+    — the W cache may have changed since the index was built (a warm/migration pass, or a
+    re-extracted bundle whose stale entries were dropped); restart the server to rescan, or
+    pick another sample / method</span>`;
+}
+
+async function selectSample(ds, qid){
+  S.ds = ds; S.qid = qid; S.anchor = null; S.span = null; S.pinned = false; S.scores = {}; S._edges = null;
+  $("srcpanel").style.display = "none";
+  $("pickbtn").textContent = "loading…";
+  try {
+    const [sample, records, img] = await Promise.all([
+      api(`/api/sample/${ds}/${qid}`),
+      api(recordURL(ds, qid)),
+      new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i);
+                                  i.onerror = () => rej(new Error("image failed to load"));
+                                  i.src = `data/image/${ds}/${qid}.png`; }),
+    ]);
+    S.sample = sample; S.records = records; S.img = img;
+    $("pickbtn").textContent = `Sample: ${qid}`;
+    $("qtext").textContent = sample.question || "(see prompt)";
+    $("gold").textContent = sample.gold || "—";
+    $("imgtitle").innerHTML = `Image <small style="font-weight:400">· ground truth: <b>${esc(String(sample.gold || "—"))}</b></small>`;
+    const gen = sample.generated_text || "";
+    const m = gen.toLowerCase().lastIndexOf("final answer:");
+    $("pred").textContent = m >= 0 ? gen.slice(m + 13).trim().slice(0, 80) : gen.slice(-60);
+    const meta_ = (S.index.datasets[ds] || []).find(x => x.qid === qid);
+    const okb = $("okbadge");
+    okb.textContent = meta_ && meta_.ok === true ? "✓" : meta_ && meta_.ok === false ? "✗" : "";
+    okb.style.color = meta_ && meta_.ok ? "#1d7a4f" : "#b44a1d";
+    okb.title = "model answer vs gold (mechanical string match)";
+    await refresh();
+  } catch (e) {
+    showLoadError(`${qid} failed to load`, e);
+  }
+}
+
+async function refresh(){
+  if (!S.qid) return;
+  for (const c of $("chips").children) c.classList.toggle("on", c.dataset.m === S.method);
+  const meta = methodMeta(S.method), w = hasW(S.method);
+  $("katzsw").classList.toggle("on", S.katz && w);
+  $("katzsw").disabled = !w; $("gamma").disabled = !w || !S.katz; $("readout").disabled = !w || !S.katz;
+  let sc;
+  try {
+    sc = await getScores(S.method);
+  } catch (e) {
+    showLoadError(`no scores for ${S.qid}/${S.method}`, e);
+    return;
+  }
+  const bits = [];
+  if (meta.note) bits.push(meta.note);
+  if (sc.arm){
+    const inRec = S.records.arms[sc.arm] ? "" : " (no cached eval for this arm)";
+    // CANE has no arm to choose: the walk-sum and the MRE rescale are already inside it, so ':raw'
+    // is the whole method and naming the arm says nothing a reader can act on. The missing-eval
+    // warning is not noise, so it still shows on its own.
+    const av = armAvail(S.method);
+    if (av.fell_back)
+      bits.push(`<span class="unscored">${S.mask}/${S.mode} has no ${esc(armOf(S.method))} — `
+                + `showing <b>${esc(av.arm)}</b></span>`);
+    if (S.method === "cane"){ if (inRec) bits.push(inRec.trim()); }
+    else bits.push(`arm <b>${sc.arm}</b>${inRec}`);
+  }
+  if (sc.snapped_gamma != null) bits.push(`metrics snapped to γ=${sc.snapped_gamma}`);
+  $("armhint").innerHTML = bits.join(" · ");
+  const dsel = $("diffsel");
+  dsel.innerHTML = '<option value="">—</option>' +
+    ORDERED.filter(m => m !== S.method && m !== "posnull")
+      .map(m => `<option value="${m}">${esc(methodMeta(m).label)}</option>`).join("");
+  if (S.diffB === S.method) S.diffB = null;
+  dsel.value = S.diffB || "";
+  S._meansCur = await fetchMeans();          // scoreboard + mean curve view still need these
+  for (const c of $("chips").children){
+    const av = armAvail(c.dataset.m);        // THIS SAMPLE's record, falling back within family
+    const r = armRec(av.arm);
+    let numEl = c.querySelector(".chipnum");
+    if (!numEl){ numEl = document.createElement("span"); numEl.className = "chipnum";
+                 c.appendChild(numEl); }
+    numEl.textContent = r && r.rise != null
+      ? `${r.rise.toFixed(3)}${r.mas != null ? " / " + r.mas.toFixed(3) : ""}` +
+        (av.fell_back ? ` ·${av.arm.split(":")[1]}` : "") : "";
+    numEl.title = `this sample's ${S.mode} RISE / MAS for this method under the current `
+                + `settings (${betterIsLower() ? "lower" : "higher"} is better)`
+                + (av.fell_back ? `; the requested katz arm has no record in this `
+                + `substrate/mode cell, so the nearest cached arm (${av.arm}) is shown` : "")
+                + `; dataset means live in the scoreboard and the curve panel's "dataset mean" view`;
+  }
+  clearArcs();
+  retitleForMode();
+  renderStrip(sc); renderCurve(); renderScoreboard(); renderStep();
+  if (S.compare) renderCompare(true);
+  writeURL();
+}
+
+/* ---------------------------------------------------------------- image heatmap */
+function drawOverlay(canvas, sc, opts){
+  const s = S.sample, [h, w] = s.grid, [s0, s1] = s.img_span;
+  const img = S.img, W = (opts && opts.w) || 980;
+  const scale = W / img.naturalWidth, H = Math.round(img.naturalHeight * scale);
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, W, H);
+  const cw = W / w, ch = H / h;
+  // pixel-exact cell rects: fractional +.5 overdraw painted a faint lattice over the photo
+  const cellRect = i => {
+    const cell = i - s0, r = Math.floor(cell / w), c = cell % w;
+    const x0 = Math.round(c * cw), y0 = Math.round(r * ch);
+    return [x0, y0, Math.round((c + 1) * cw) - x0, Math.round((r + 1) * ch) - y0];
+  };
+  const col = COLOR[(opts && opts.method) || S.method];
+  const strength = (opts && opts.strength != null) ? opts.strength : S.overlay;
+  const removed = removedSet(sc);
+  // diff mode: color = percentile-rank difference between two methods over the image family
+  // (diverging: blue = current method ranks the patch higher, orange = the other one does)
+  let dval = null;
+  if (opts && opts.diffScores){
+    const n = s1 - s0;
+    const rank = arr => {
+      const idx = Array.from({length: n}, (_, i) => i).sort((a, b) => arr[s0 + a] - arr[s0 + b]);
+      const rk = new Array(n);
+      idx.forEach((cell, ord) => rk[cell] = ord / (n - 1 || 1));
+      return rk;
+    };
+    const rA = rank(sc.scores), rB = rank(opts.diffScores);
+    dval = rA.map((v, i) => v - rB[i]);
+  }
+  if (dval){
+    for (let i = s0; i < s1; i++){
+      const [x, y, cwv, chv] = cellRect(i);
+      const d = dval[i - s0];
+      if (Math.abs(d) >= 0.05){
+        ctx.fillStyle = (d > 0 ? "#2a78d6" : "#eb6834") + toHex(Math.pow(Math.abs(d), 1.1) * strength);
+        ctx.fillRect(x, y, cwv, chv);
+      }
+      if (removed.has(i)){
+        ctx.fillStyle = "rgba(126,124,117,.85)"; ctx.fillRect(x, y, cwv, chv);
+        ctx.strokeStyle = "rgba(252,252,251,.65)"; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 1, y + 1); ctx.lineTo(x + cwv - 1, y + chv - 1);
+        ctx.moveTo(x + cwv - 1, y + 1); ctx.lineTo(x + 1, y + chv - 1); ctx.stroke();
+      }
+    }
+    return {cw, ch, W, H};
+  }
+  // hotspot cells (top 12% of the image family) get a solid border, so the peaks stay
+  // readable even at low overlay strength -- the wash carries magnitude, the border identity
+  const vals = [];
+  for (let i = s0; i < s1; i++) if (sc.scores[i] > 0) vals.push(sc.scores[i]);
+  vals.sort((a, b) => b - a);
+  const hot = vals.length ? vals[Math.max(0, Math.floor(vals.length * 0.12) - 1)] : Infinity;
+  // Robust scale: attribution is heavy-tailed, so normalising by the max lets one dominant
+  // patch crush every other cell to invisible. Clip the scale at the 98th percentile instead.
+  const p98 = vals.length ? vals[Math.floor(0.02 * (vals.length - 1))] : 0;
+  for (let i = s0; i < s1; i++){
+    const [x, y, cwv, chv] = cellRect(i);
+    const v = p98 > 0 ? Math.min(1, sc.scores[i] / p98) : 0;
+    if (vals.length){
+      // figure-ground: dim low-attribution cells (gray scrim), saturate high ones with the
+      // method colour -- reads as "lit up" instead of a faint tint over a busy image.
+      // Kept LIGHT (max ~0.2 alpha) so it never competes with the solid gray of a REMOVED cell.
+      const dim = strength * 0.28 * (1 - v);
+      if (dim > 0.02){
+        ctx.fillStyle = `rgba(82,81,78,${dim.toFixed(3)})`;
+        ctx.fillRect(x, y, cwv, chv);
+      }
+      const ca = strength * 0.85 * Math.pow(v, 0.9);
+      if (ca > 0.03){
+        ctx.fillStyle = col + toHex(ca);
+        ctx.fillRect(x, y, cwv, chv);
+      }
+    }
+    if (sc.scores[i] >= hot && vals.length){
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.strokeRect(x + 1, y + 1, cwv - 2, chv - 2);
+    }
+    if (removed.has(i)){
+      ctx.fillStyle = "rgba(126,124,117,.85)"; ctx.fillRect(x, y, cwv, chv);
+      ctx.strokeStyle = "rgba(252,252,251,.65)"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 1, y + 1); ctx.lineTo(x + cwv - 1, y + chv - 1);
+      ctx.moveTo(x + cwv - 1, y + 1); ctx.lineTo(x + 1, y + chv - 1); ctx.stroke();
+    }
+  }
+  return {cw, ch, W, H};
+}
+const toHex = a => Math.round(Math.min(1, Math.max(0, a)) * 255).toString(16).padStart(2, "0");
+
+let _geom = null;
+function renderImage(sc, scB){
+  const canvas = $("imgcanvas");
+  _geom = drawOverlay(canvas, sc, {w: 980, diffScores: scB ? scB.scores : null});
+  const s = S.sample;
+  if (scB){
+    $("imgtitle").textContent = `Image — ${methodMeta(S.method).label} vs ` +
+      `${methodMeta(S.diffB).label} (rank difference)`;
+    $("imglegend").innerHTML = `<span style="display:inline-block;width:74px;height:9px;
+      border-radius:4px;background:linear-gradient(90deg,#eb6834,#fcfcfb,#2a78d6);
+      vertical-align:middle"></span> ${esc(methodMeta(S.diffB).label)} ranks higher ← → ` +
+      `${esc(methodMeta(S.method).label)} ranks higher · <span class="mono">✕</span> ${ablWord()} ` +
+      `(by ${esc(methodMeta(S.method).label)}'s order)`;
+  } else {
+    $("imgtitle").textContent =
+      `Image — ${methodMeta(S.method).label} attribution (${s.img_span[1] - s.img_span[0]} patch tokens)`;
+    $("imglegend").innerHTML = `<span style="display:inline-block;width:74px;height:9px;
+      border-radius:4px;background:linear-gradient(90deg,#8d8c88,#f2f1ee 35%,${COLOR[S.method]});
+      vertical-align:middle"></span> dimmed = low → ${esc(methodMeta(S.method).label)} colour = high
+      (scale clipped at p98) ·
+      <span style="display:inline-block;width:11px;height:11px;border:2px solid ${COLOR[S.method]};
+      border-radius:2px;vertical-align:middle"></span> top-12% hotspot ·
+      <span class="mono">✕</span> ${ablWord()} at current step`;
+  }
+  canvas.onmousemove = e => {
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width * _geom.W;
+    const py = (e.clientY - rect.top) / rect.height * _geom.H;
+    const [h, w] = s.grid;
+    const c = Math.floor(px / _geom.cw), r = Math.floor(py / _geom.ch);
+    if (c < 0 || c >= w || r < 0 || r >= h) return $("imgtip").style.display = "none";
+    const pos = s.img_span[0] + r * w + c;
+    const tip = $("imgtip");
+    tip.style.display = "block";
+    tip.style.left = (e.clientX - rect.left + 12) + "px";
+    tip.style.top = (e.clientY - rect.top - 8) + "px";
+    tip.textContent = `patch (${r},${c}) · pos ${pos} · score ${sc.scores[pos]} · click to pin`;
+  };
+  canvas.onmouseleave = () => $("imgtip").style.display = "none";
+  canvas.onclick = e => {
+    const rect = canvas.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width * _geom.W;
+    const py = (e.clientY - rect.top) / rect.height * _geom.H;
+    const [h, w] = s.grid;
+    const c = Math.floor(px / _geom.cw), r = Math.floor(py / _geom.ch);
+    if (c < 0 || c >= w || r < 0 || r >= h) return;
+    const pos = s.img_span[0] + r * w + c;
+    if (S.pinned && S.anchor === pos){
+      S.pinned = false; clearArcs(); renderSourcePanel();
+    } else {
+      S.pinned = true; hoverAnchor(pos);
+    }
+  };
+}
+
+/* ---------------------------------------------------------------- token strip */
+function renderStrip(sc){
+  const s = S.sample, box = $("strip");
+  const [s0, s1] = s.img_span, [u0, u1] = s.user_text_span;
+  const T = s.seq_len, nIn = s.n_input;
+  const ansLo = nIn + s.answer_seg[0], ansHi = nIn + s.answer_seg[1];
+  let mx = 0;
+  for (let i = u0; i < u1; i++) mx = Math.max(mx, sc.scores[i]);
+  for (let i = nIn; i < T; i++) mx = Math.max(mx, sc.scores[i]);
+  const col = COLOR[S.method];
+  $("striptitle").innerHTML = `Text — question (${u1 - u0}) + generation (${T - nIn}) tokens`;
+  const frag = [];
+  frag.push(`<span class="sect">system + &lt;image×${s1 - s0}&gt; (left panel)</span>`);
+  // top text tokens get a thick colored underline so peaks stay visible even when the
+  // magnitude ramp leaves most of the strip pale
+  const tv = [];
+  for (let i = u0; i < u1; i++) if (sc.scores[i] > 0) tv.push(sc.scores[i]);
+  for (let i = nIn; i < T; i++) if (sc.scores[i] > 0) tv.push(sc.scores[i]);
+  tv.sort((a, b) => b - a);
+  const hotv = tv.length ? tv[Math.min(tv.length - 1, Math.max(7, Math.floor(tv.length * 0.05)))] : Infinity;
+  const tok = i => {
+    const v = mx > 0 ? sc.scores[i] / mx : 0;
+    const shadows = [];
+    if (tv.length && sc.scores[i] >= hotv && sc.scores[i] > 0) shadows.push(`inset 0 -3px 0 ${col}`);
+    if (i >= ansLo && i < ansHi) shadows.push("0 2px 0 0 #0b0b0b");
+    const st = (v > 0.03 ? `background:${col}${toHex(Math.pow(v, 1.15) * 0.85)};` : "") +
+               (shadows.length ? `box-shadow:${shadows.join(",")}` : "");
+    return `<span class="tok" data-p="${i}" style="${st}">${esc(s.texts[i])}</span>`;
+  };
+  for (let i = u0; i < u1; i++) frag.push(tok(i));
+  frag.push(`<span class="sect">assistant ↓ generation</span>`);
+  for (let i = nIn; i < T; i++) frag.push(tok(i));
+  box.innerHTML = frag.join("");
+  $("striplegend").innerHTML =
+    `<span><span style="display:inline-block;width:34px;height:8px;border-radius:3px;
+      background:linear-gradient(90deg,transparent,${col});vertical-align:middle"></span>
+      attribution (text-family scale)</span>
+     <span><span class="tok" style="padding:0 4px;box-shadow:inset 0 -3px 0 ${col}">tok</span>
+       top ~5% text tokens (this method)</span>
+     <span><span class="tok answer" style="padding:0 4px">tok</span> answer span</span>
+     <span><span class="tok" style="padding:0 4px;outline:1.5px dashed #52514e">tok</span>
+       source of the hovered token</span>
+     <span><span class="tok removed" style="padding:0 4px">tok</span> ${ablWord()} at step</span>
+     <span>hover a token for its top-${S.topk} sources · click to pin ·
+       shift+click another token to trace a whole span · click a source to walk the path</span>`;
+  box.onmouseover = e => { const p = e.target.dataset && e.target.dataset.p;
+    if (p != null && !S.pinned) hoverAnchor(+p); };
+  box.onclick = e => { const p = e.target.dataset && e.target.dataset.p;
+    if (p == null) return;
+    const sEnd = S.sample.img_span[1];
+    if (e.shiftKey && S.anchor != null && S.anchor >= sEnd && +p >= sEnd){
+      // shift+click extends the anchored TEXT token to a span; sources are the
+      // union of every member's incoming edges (weights summed per source)
+      S.span = [Math.min(S.anchor, +p), Math.max(S.anchor, +p)];
+      S.pinned = true;
+      hoverAnchor(S.anchor, true);
+      return;
+    }
+    if (S.pinned && S.anchor === +p && !S.span){ S.pinned = false; clearArcs(); renderSourcePanel(); }
+    else { S.pinned = true; hoverAnchor(+p); } };
+  box.onmouseleave = () => { if (!S.pinned) clearArcs(); };
+  S._sc = sc;
+  renderMinimap(sc);
+}
+
+/* ---------------------------------------------------------------- minimap + source panel */
+function dispPositions(){                     // sequence positions the strip actually shows
+  const s = S.sample, [u0, u1] = s.user_text_span, out = [];
+  for (let i = u0; i < u1; i++) out.push(i);
+  for (let i = s.n_input; i < s.seq_len; i++) out.push(i);
+  return out;
+}
+function scrollToPos(pos){
+  const el = document.querySelector(`.tok[data-p="${pos}"]`), st = $("strip");
+  if (!el) return;
+  st.scrollTop = Math.max(0, el.getBoundingClientRect().top -
+    st.getBoundingClientRect().top + st.scrollTop - st.clientHeight / 2);
+}
+function renderMinimap(sc){
+  const cv = $("minimap"), st = $("strip"), s = S.sample;
+  if (!s || !sc) return;
+  const H = Math.max(60, st.clientHeight);
+  cv.height = H;
+  const ctx = cv.getContext("2d");
+  ctx.clearRect(0, 0, 16, H);
+  const disp = dispPositions(), n = disp.length;
+  if (!n) return;
+  let mx = 0;
+  for (const p of disp) mx = Math.max(mx, sc.scores[p]);
+  const removed = removedSet(sc), col = COLOR[S.method];
+  const ansLo = s.n_input + s.answer_seg[0], ansHi = s.n_input + s.answer_seg[1];
+  for (let y = 0; y < H; y++){
+    const lo = Math.floor(n * y / H), hi = Math.max(lo + 1, Math.floor(n * (y + 1) / H));
+    let v = 0, rem = false, ans = false;
+    for (let k = lo; k < hi && k < n; k++){
+      const p = disp[k];
+      v = Math.max(v, mx > 0 ? sc.scores[p] / mx : 0);
+      if (removed.has(p)) rem = true;
+      if (p >= ansLo && p < ansHi) ans = true;
+    }
+    if (v > 0.02){ ctx.fillStyle = col + toHex(Math.pow(v, 0.8)); ctx.fillRect(0, y, 16, 1); }
+    if (rem){ ctx.fillStyle = "rgba(126,124,117,.9)"; ctx.fillRect(10, y, 6, 1); }
+    if (ans){ ctx.fillStyle = "#0b0b0b"; ctx.fillRect(0, y, 16, 1); }
+  }
+  // viewport indicator (document-fraction approximation)
+  if (st.scrollHeight > st.clientHeight){
+    const y0 = H * st.scrollTop / st.scrollHeight;
+    const hh = Math.max(8, H * st.clientHeight / st.scrollHeight);
+    ctx.strokeStyle = "#0b0b0b"; ctx.lineWidth = 1.5;
+    ctx.strokeRect(0.75, y0 + 0.75, 14.5, hh - 1.5);
+  }
+}
+function tokLabel(pos){
+  const s = S.sample, [s0, s1] = s.img_span;
+  if (pos >= s0 && pos < s1){
+    const cell = pos - s0, w = s.grid[1];
+    return `patch(${Math.floor(cell / w)},${cell % w})`;
+  }
+  const raw = s.texts[pos] || "";
+  const t = raw.trim();
+  if (t) return `“${t.length > 14 ? t.slice(0, 13) + "…" : t}”`;
+  if (raw)                                   // pure-whitespace token: show it explicitly
+    return `“${raw.replace(/\n/g, "⏎").replace(/\t/g, "⇥").replace(/ /g, "␣")}”`;
+  return `pos ${pos}`;
+}
+function renderSourcePanel(){
+  const box = $("srcpanel"), E = S._edges;
+  if (!S.pinned || !E || !E.edges.length){ box.style.display = "none"; return; }
+  // greedy strongest chain: anchor <- top source <- its top source <- ... (from the fetched levels)
+  const edgesOf = pos => pos === E.p ? E.edges
+    : ((E.second || []).find(x => x.p === pos) || {}).edges;
+  const chain = [{pos: E.p}];
+  let cur = E.p;
+  for (let d = 0; d < 12; d++){
+    const es = edgesOf(cur);
+    if (!es || !es.length) break;
+    chain.push({pos: es[0][0], w: es[0][1]});
+    cur = es[0][0];
+  }
+  const crumb = chain.map((c, i) =>
+    `${i ? `<span class="wt">←&nbsp;${c.w.toPrecision(2)}</span>` : ""}` +
+    `<span class="seg2" data-p="${c.pos}">${esc(tokLabel(c.pos))}</span>`).join(" ");
+  const mxw = Math.max(...E.edges.map(e => e[1]), 1e-30);
+  const rows = E.edges.map(([p, wt]) => `<tr data-p="${p}"><td>${esc(tokLabel(p))}</td>
+    <td class="mono">${p}</td><td class="mono">${wt.toPrecision(3)}</td>
+    <td class="bar" style="width:130px"><div style="width:${(100 * wt / mxw).toFixed(0)}%;
+    background:${COLOR[S.method]}"></div></td></tr>`).join("");
+  const wasOpen = !!box.querySelector("details[open]");
+  const top3 = E.edges.slice(0, 3).map(([p, wt]) =>
+    `<b>${esc(tokLabel(p))}</b> ${wt.toPrecision(2)}`).join(", ");
+  box.innerHTML = `<details${wasOpen ? " open" : ""}>
+    <summary>sources of <b>${esc(tokLabel(E.p))}</b> — top: ${top3} · expand for path + table</summary>
+    <div class="crumb"><span class="muted">strongest path:</span> ${crumb}
+      <button class="btn nav" id="crumbcopy">⧉</button></div>
+    <table><thead><tr><th>source of ${esc(tokLabel(E.p))}</th><th>pos</th>
+      <th>${E.mode === "katz_credit" ? "edge credit" : "edge weight"}</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table>
+  </details>`;
+  box.style.display = "block";
+  box.onclick = e => {
+    if (e.target.id === "crumbcopy"){
+      const txt = chain.map((c, i) => (i ? ` <- (${c.w.toPrecision(2)}) ` : "") +
+        tokLabel(c.pos).replace(/[“”]/g, '"')).join("");
+      navigator.clipboard && navigator.clipboard.writeText(`${S.qid} [${armOf(S.method)}]: ${txt}`);
+      e.target.textContent = "✓";
+      setTimeout(() => { e.target.textContent = "⧉"; }, 1000);
+      return;
+    }
+    const row = e.target.closest("[data-p]");
+    if (row){ const p = +row.dataset.p; S.pinned = true; scrollToPos(p); hoverAnchor(p); }
+  };
+}
+
+/* ---------------------------------------------------------------- arcs */
+let _edgeTimer = null, _edgeCtl = null;
+function hoverAnchor(p, keepSpan = false){
+  if (!keepSpan) S.span = null;
+  S.anchor = p;
+  clearTimeout(_edgeTimer);
+  _edgeTimer = setTimeout(async () => {
+    if (_edgeCtl) _edgeCtl.abort();
+    _edgeCtl = new AbortController();
+    try {
+      const w = hasEdges(S.method);   // own edge matrix -> own arcs (IFR only as fallback)
+      const method = w ? S.method : EDGE_FALLBACK;
+      // katz composition only for methods whose W is a single hop (has_w):
+      // CANE's cached matrix already contains the walk-sum, so its columns
+      // are read raw rather than composed a second time
+      const katzOn = S.katz && hasW(S.method);
+      const get = (pos, k, kz = katzOn) => staticFetch(`/api/edges/${S.ds}/${S.qid}/${method}` +
+        `?anchor=${pos}&katz=${kz ? 1 : 0}&gamma=${S.gamma}&topk=${k}`,
+        {signal: _edgeCtl.signal}).then(x => x.json());
+      // ans_tp is the PREDICTING row: the visible answer token at q is emitted by row q-1,
+      // and Katz credit into any position past the sink is exactly zero (core/types.py:60).
+      // Anchoring an answer-span token therefore fetches its predicting row instead.
+      const sm = S.sample, aLo = sm.n_input + sm.answer_seg[0], aHi = sm.n_input + sm.answer_seg[1];
+      const fpOf = q => (katzOn && q >= aLo && q < aHi && q > 0) ? q - 1 : q;
+      let fp = p, note = "", r;
+      if (S.span){
+        // span trace: union of every member's incoming edges, weights summed per
+        // source; a source inside the span is internal structure, not an input
+        const [lo, hi] = S.span;
+        const members = [];
+        for (let q = lo; q <= hi && members.length < 32; q++) members.push(q);
+        const rs = await Promise.all(members.map(q =>
+          get(fpOf(q), S.topk).catch(() => ({edges: []}))));
+        const agg = new Map();
+        let mode = "none";
+        rs.forEach((rr, i) => {
+          if (rr.mode && rr.mode !== "none") mode = rr.mode;
+          for (const [j, wt] of (rr.edges || [])){
+            if (j >= lo && j <= hi) continue;
+            const a = agg.get(j) || {w: 0, best: members[i], bw: -1};
+            a.w += wt;
+            if (wt > a.bw){ a.bw = wt; a.best = members[i]; }
+            agg.set(j, a);
+          }
+        });
+        r = {edges: [...agg].map(([j, a]) => [j, a.w, a.best])
+               .sort((x, y) => y[1] - x[1]).slice(0, S.topk), mode};
+        note = ` · span ${lo}–${hi}, ${hi - lo + 1} tokens` +
+               (hi - lo + 1 > members.length ? ` (first ${members.length} traced)` : "") +
+               `, edge weights summed per source`;
+      } else {
+        if (katzOn && p >= aLo && p < aHi && p > 0){
+          fp = p - 1;
+          note = "";
+        }
+        r = await get(fp, S.topk);
+        if (katzOn && !(r.edges || []).length){     // e.g. trailing <|im_end|>: past the sink
+          r = await get(fp, S.topk, false);
+          note = "";
+        }
+      }
+      const second = [];
+      const nh = parseInt(S.hops, 10);
+      if (nh > 1){
+        // breadth-first down to `hops` levels: top-3 heads from the anchor,
+        // then top-2 continuations per expanded node, with a global budget so
+        // the static export's per-anchor lookups stay cheap
+        const seen = new Set([p]);
+        let queue = (r.edges || []).slice(0, 3).map(([sp]) => ({pos: sp, depth: 1}));
+        let budget = 4 + 4 * (nh - 1);
+        while (queue.length && budget > 0){
+          const node = queue.shift();
+          if (node.depth >= nh || seen.has(node.pos)) continue;
+          seen.add(node.pos);
+          budget--;
+          const sub = await get(node.pos, Math.min(6, S.topk));
+          second.push({p: node.pos, edges: sub.edges || [], depth: node.depth});
+          for (const [sp] of (sub.edges || []).slice(0, 2))
+            if (!seen.has(sp)) queue.push({pos: sp, depth: node.depth + 1});
+        }
+      } else if (S.hops === "input"){
+        // walk the strongest edges backwards until the frontier is all prompt tokens:
+        // BFS, expanding up to 10 generation-side nodes, top-2 continuations each
+        const nIn = S.sample.n_input;
+        const seen = new Set([p]);
+        let queue = (r.edges || []).slice(0, 2).map(([sp]) => ({pos: sp, depth: 1}));
+        let budget = 10;
+        while (queue.length && budget > 0){
+          const node = queue.shift();
+          if (node.pos < nIn || seen.has(node.pos)) continue;   // reached the input: a leaf
+          seen.add(node.pos);
+          budget--;
+          const sub = await get(node.pos, 4);
+          second.push({p: node.pos, edges: sub.edges || [], depth: node.depth});
+          for (const [sp] of (sub.edges || []).slice(0, 2))
+            if (!seen.has(sp)) queue.push({pos: sp, depth: node.depth + 1});
+        }
+      }
+      S._edges = {p, fp, span: S.span, edges: r.edges || [], mode: r.mode,
+                  borrowed: !w, second, note};
+      redrawArcs(true);
+      renderSourcePanel();
+    } catch (e) {
+      if (e.name !== "AbortError")
+        $("armhint").innerHTML = `<span style="color:#b44a1d">edges: ${esc(String(e))}</span>`;
+    }
+  }, 130);
+}
+function redrawArcs(force){
+  if ((S.pinned || force) && S._edges)
+    drawArcs(S._edges);
+}
+function clearArcs(){
+  $("arcs").innerHTML = "";
+  for (const el of document.querySelectorAll(".tok.anchor,.tok.edgesrc"))
+    el.classList.remove("anchor", "edgesrc");
+}
+function drawArcs(E){
+  clearArcs();
+  const svg = $("arcs"), lay = $("mainrow");
+  const lr = lay.getBoundingClientRect();
+  svg.setAttribute("viewBox", `0 0 ${lr.width} ${lr.height}`);
+  const strip = $("strip").getBoundingClientRect();
+  const clampY = y => Math.max(strip.top - lr.top, Math.min(strip.bottom - lr.top, y));
+  const s = S.sample, [s0, s1] = s.img_span, w = s.grid[1];
+  const canvas = $("imgcanvas"), cr = canvas.getBoundingClientRect();
+
+  const point = pos => {                                // center of a patch cell or token span
+    if (pos >= s0 && pos < s1){
+      const cell = pos - s0, r0 = Math.floor(cell / w), c0 = cell % w;
+      return {x: cr.left - lr.left + (c0 + .5) * (cr.width / w),
+              y: cr.top - lr.top + (r0 + .5) * (cr.height / s.grid[0]), img: true};
+    }
+    const el = document.querySelector(`.tok[data-p="${pos}"]`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return {x: r.left - lr.left + r.width / 2,
+            y: clampY(r.top - lr.top + r.height / 2), img: false, el};
+  };
+  const path = (a, b) => {
+    if (a.img || b.img)
+      return `M${a.x},${a.y} C ${a.x + 120},${a.y} ${b.x - 160},${b.y} ${b.x},${b.y}`;
+    const lift = Math.min(70, 18 + Math.abs(b.y - a.y) * .25 + Math.abs(b.x - a.x) * .08);
+    return `M${a.x},${a.y} C ${a.x},${a.y - lift} ${b.x},${b.y - lift} ${b.x},${b.y}`;
+  };
+  const parts = [];
+  const draw = (targetPos, edges, scale, mxwOverride) => {
+    const tp = point(targetPos);
+    if (!tp) return;
+    const mxw = mxwOverride || Math.max(...edges.map(e => e[1]), 1e-30);
+    for (const [src, wt] of edges){
+      const a = point(src);
+      if (!a) continue;
+      const sw = (scale * (0.8 + 2.6 * wt / mxw)).toFixed(1);
+      const op = (scale * (0.35 + 0.55 * wt / mxw)).toFixed(2);
+      if (a.img){
+        const cwv = cr.width / w, chv = cr.height / s.grid[0];
+        parts.push(`<rect x="${a.x - cwv / 2}" y="${a.y - chv / 2}" width="${cwv}" height="${chv}"
+          fill="none" stroke="#0b0b0b" stroke-width="${(1.6 * scale).toFixed(1)}" opacity="${op}"/>`);
+      } else if (a.el) a.el.classList.add("edgesrc");
+      parts.push(`<path d="${path(a, tp)}" fill="none"
+        stroke="${a.img ? "#0b0b0b" : "#52514e"}" stroke-width="${sw}" opacity="${op}"
+        ${scale < 1 ? 'stroke-dasharray="3 3"' : ""}/>`);
+    }
+    return tp;
+  };
+  for (const sec of (E.second || []))                    // deeper hops: thinner and lighter
+    draw(sec.p, sec.edges, Math.max(0.35, 1 - 0.22 * (sec.depth || 1)));
+  let tp;
+  if (E.span){
+    // one normalization across the whole span: arcs land on the member each
+    // source feeds most, but widths stay comparable between members
+    const gmax = Math.max(...E.edges.map(e => e[1]), 1e-30);
+    const byT = new Map();
+    for (const [j, wt, t] of E.edges){
+      const key = t == null ? E.p : t;
+      if (!byT.has(key)) byT.set(key, []);
+      byT.get(key).push([j, wt]);
+    }
+    for (const [t, arr] of byT) tp = draw(+t, arr, 1, gmax) || tp;
+    for (let q = E.span[0]; q <= E.span[1]; q++){
+      const el = document.querySelector(`.tok[data-p="${q}"]`);
+      if (el) el.classList.add("anchor");
+    }
+  } else {
+    tp = draw(E.p, E.edges, 1);
+  }
+  const at = document.querySelector(`.tok[data-p="${E.p}"]`);
+  if (at) at.classList.add("anchor");
+  if (tp && tp.img){                                   // anchored PATCH: white-under-black ring
+    const cwv = cr.width / s.grid[1], chv = cr.height / s.grid[0];
+    for (const [col, wid] of [["#fcfcfb", 4], ["#0b0b0b", 1.6]])
+      parts.push(`<rect x="${tp.x - cwv / 2 - 2}" y="${tp.y - chv / 2 - 2}" width="${cwv + 4}"
+        height="${chv + 4}" fill="none" stroke="${col}" stroke-width="${wid}" rx="2"/>`);
+  }
+  if (tp){
+    const lbl = E.mode === "katz_credit" ? "Katz edge credit toward the answer"
+              : E.mode === "raw" ? "raw single-hop edge weight" : "";
+    parts.push(`<text x="${tp.x + 8}" y="${tp.y - 10}" font-size="10" fill="#52514e">
+      ${lbl}${esc(E.note || "")}${parseInt(S.hops, 10) > 1 ? " · dashed = deeper hops" :
+             S.hops === "input" ? " · dashed = deeper hops, traced back to the prompt" : ""}${E.borrowed ?
+      " (edges via " + esc(methodMeta(EDGE_FALLBACK).label) + " — " +
+      esc(methodMeta(S.method).label) + " has no edge matrix)" : ""}</text>`);
+  }
+  svg.innerHTML = parts.join("");
+}
+
+/* ---------------------------------------------------------------- deletion curve */
+function armRec(arm){ const a = S.records.arms[arm]; return a && a[S.leg]; }
+function renderCurve(){
+  const svg = $("curve"), box = svg.getBoundingClientRect();
+  const Wd = Math.max(480, box.width), Hd = 280;
+  svg.setAttribute("viewBox", `0 0 ${Wd} ${Hd}`);
+  const L = 44, R = 158, Tm = 14, B = 30;
+  const pw = Wd - L - R, ph = Hd - Tm - B;
+  const X = i => L + pw * i / 20, Y = v => Tm + ph * (1 - v);
+  const parts = [];
+  for (const g of [0, .25, .5, .75, 1]){
+    parts.push(`<line x1="${L}" y1="${Y(g)}" x2="${L + pw}" y2="${Y(g)}" stroke="#dcdbd6" stroke-width="0.7"/>`);
+    parts.push(`<text x="${L - 7}" y="${Y(g) + 3.5}" text-anchor="end" font-size="10" fill="#52514e">${g}</text>`);
+  }
+  for (const p of [0, 25, 50, 75, 100])
+    parts.push(`<text x="${X(p / 5)}" y="${Hd - 10}" text-anchor="middle" font-size="10" fill="#52514e">${p}%</text>`);
+  // the two empty corners say what the y-axis means without an axis title; deletion curves
+  // run top-left -> bottom-right, insertion the mirror, so the labels swap corners with mode
+  const delMode = S.mode !== "insertion";
+  parts.push(delMode
+    ? `<text x="${L + pw - 6}" y="${Tm + 12}" text-anchor="end" font-size="9.5" fill="#52514e">response intact</text>`
+    : `<text x="${L + 6}" y="${Tm + 26}" font-size="9.5" fill="#52514e">response intact</text>`);
+  parts.push(delMode
+    ? `<text x="${L + 6}" y="${Tm + ph - 6}" font-size="9.5" fill="#52514e">response gone</text>`
+    : `<text x="${L + pw - 6}" y="${Tm + ph - 6}" text-anchor="end" font-size="9.5" fill="#52514e">response gone</text>`);
+  parts.push(`<text x="${L + pw + 10}" y="${Tm - 3}" font-size="9" fill="#52514e">RISE = area (${delMode ? "↓" : "↑"} better)</text>`);
+
+  const series = [];
+  for (const m of ORDERED){
+    const rec = curveRec(m);
+    if (!rec || !rec.MR) continue;
+    series.push({m, arm: armOf(m), rec, cur: m === S.method});
+  }
+  if (!series.length){
+    // Say the cell is unscored instead of drawing empty axes that look like a flat result.
+    $("curve").innerHTML = `<text x="50%" y="46%" text-anchor="middle" font-size="13"
+        fill="#52514e">no ${esc(S.mask)} / ${esc(S.mode)} evaluation for this bundle</text>
+      <text x="50%" y="56%" text-anchor="middle" font-size="11" fill="#8a8880">the image overlay
+        still shows this method's ranking; the response curve needs a scored record</text>`;
+    return;
+  }
+  // current method: RISE = the area under its curve (light fill, labeled in place)
+  const curSel = series.find(x => x.cur);
+  if (curSel){
+    const mr = curSel.rec.MR;
+    const under = "M" + mr.map((v, i) => `${X(i)},${Y(v)}`).join(" L ") +
+      ` L ${X(20)},${Y(0)} L ${X(0)},${Y(0)} Z`;
+    parts.push(`<path d="${under}" fill="${COLOR[curSel.m]}12" stroke="none"/>`);
+    let ia = 4;
+    for (let i = 4; i <= 16; i++) if (mr[i] > mr[ia]) ia = i;
+    if (mr[ia] > 0.14)
+      parts.push(`<text x="${X(ia)}" y="${(Y(0) + Y(mr[ia])) / 2 + 4}" text-anchor="middle"
+        font-size="9.5" fill="#52514e">RISE = this area</text>`);
+  }
+  // MAS penalty band: the gap between the curve and the method's own mass claim (DR)
+  const cur = S.masband ? curSel : null;
+  if (cur){
+    const mr = cur.rec.MR, dr = cur.rec.DR;
+    let d = "M" + mr.map((v, i) => `${X(i)},${Y(v)}`).join(" L ");
+    d += " L " + dr.slice().reverse().map((v, i) => `${X(20 - i)},${Y(v)}`).join(" L ") + " Z";
+    parts.push(`<path d="${d}" fill="${COLOR[cur.m]}2b" stroke="none"/>`);
+    parts.push(`<path d="M${dr.map((v, i) => `${X(i)},${Y(v)}`).join(" L ")}"
+      fill="none" stroke="${COLOR[cur.m]}" stroke-width="1.2" stroke-dasharray="4 4" opacity=".55"/>`);
+    let ig = 1, gap = 0;
+    for (let i = 1; i < 20; i++)
+      if (Math.abs(mr[i] - dr[i]) > gap){ gap = Math.abs(mr[i] - dr[i]); ig = i; }
+    if (gap > 0.12)
+      parts.push(`<text x="${X(ig)}" y="${(Y(mr[ig]) + Y(dr[ig])) / 2 + 4}" text-anchor="middle"
+        font-size="9.5" fill="#52514e">gap = MAS penalty</text>`);
+  }
+  const labels = [];
+  for (const x of series){
+    const pts = x.rec.MR.map((v, i) => `${X(i)},${Y(v)}`).join(" L ");
+    parts.push(`<path d="M${pts}" fill="none" stroke="${COLOR[x.m]}"
+      stroke-width="${x.cur ? 2.6 : 1.4}" opacity="${x.cur ? 1 : .5}"/>`);
+    labels.push({m: x.m, y: Y(x.rec.MR[20]), rise: x.rec.rise, cur: x.cur});
+  }
+  // de-collide direct labels: space 13px apart, then shift the block up if it overflows the plot
+  labels.sort((a, b) => a.y - b.y);
+  let last = Tm - 5;                      // floor: keep the first label clear of the header
+  for (const lb of labels){ lb.y = Math.max(lb.y, last + 13); last = lb.y; }
+  const over = last - (Tm + ph);
+  if (over > 0) for (const lb of labels) lb.y -= over;
+  for (const lb of labels)
+    parts.push(`<text x="${L + pw + 10}" y="${lb.y + 3.5}" font-size="10.5"
+      font-weight="${lb.cur ? 700 : 400}" fill="#0b0b0b">${methodMeta(lb.m).label}
+      <tspan fill="#52514e">${lb.rise.toFixed(3)}</tspan></text>`);
+  const curN = series.find(x => x.cur);
+  parts.push(`<text x="${L + 6}" y="${Tm + 12}" font-size="9.5" fill="#52514e">${delMode ? "removing" : "restoring"} each arm's top-ranked tokens first · ${S.mode} · ${S.leg} leg · ${S.mask}${
+    S.curveview === "mean" ? ` · DATASET MEAN over the paired population (n=${curN && curN.rec.n || "?"})` : " · this sample"}</text>`);
+  // scrubber marker
+  parts.push(`<line id="curvecursor" x1="${X(S.step)}" y1="${Tm}" x2="${X(S.step)}" y2="${Tm + ph}"
+    stroke="#0b0b0b" stroke-width="1" stroke-dasharray="2 3"/>`);
+  for (const x of series)
+    parts.push(`<circle class="curvedot" data-m="${x.m}" cx="${X(S.step)}"
+      cy="${Y(x.rec.MR[S.step])}" r="${x.cur ? 4.5 : 3}" fill="${COLOR[x.m]}"
+      stroke="#fff" stroke-width="1.5"/>`);
+  svg.innerHTML = parts.join("");
+  svg._series = series; svg._X = X; svg._Y = Y;
+  svg.onmousemove = e => {
+    const r = svg.getBoundingClientRect();
+    const step = Math.round(((e.clientX - r.left) / r.width * Wd - L) / pw * 20);
+    if (step < 0 || step > 20) return $("curvetip").style.display = "none";
+    const tip = $("curvetip");
+    tip.style.display = "block";
+    tip.style.left = Math.min(e.clientX - r.left + 14, r.width - 190) + "px";
+    tip.style.top = (e.clientY - r.top - 10) + "px";
+    tip.innerHTML = `<b>${step * 5}% ${S.mode === "insertion" ? "restored" : "removed"}</b><br>` +
+      svg._series.map(x =>
+      `${methodMeta(x.m).label}: ${x.rec.MR[step].toFixed(3)}`).join("<br>");
+  };
+  svg.onmouseleave = () => $("curvetip").style.display = "none";
+  svg.onclick = e => {
+    const r = svg.getBoundingClientRect();
+    const step = Math.round(((e.clientX - r.left) / r.width * Wd - L) / pw * 20);
+    if (step >= 0 && step <= 20){ S.step = step; $("scrub").value = step; renderStep(); }
+  };
+}
+
+async function renderStep(){
+  const sc = await getScores(S.method);
+  await repaintImage();
+  const removed = removedSet(sc);
+  for (const el of $("strip").querySelectorAll(".tok"))
+    el.classList.toggle("removed", removed.has(+el.dataset.p));
+  const total = sc.order[S.leg].length;
+  const n = S.step ? sc.step_ends[S.leg][Math.min(S.step, 20) - 1] : 0;
+  renderMinimap(sc);
+  const rec = curveRec(S.method);
+  // THE SCRUBBER IS A RANKING PREVIEW WHEN THIS CELL WAS NEVER EVALUATED. removedSet() comes from
+  // the cached score vector, so the overlay renders for ANY bundle in ANY (substrate, mode) --
+  // including combinations no campaign has scored yet. Left unlabelled that reads as a result: a
+  // blur/insertion view of a bundle with no blur/insertion record still animated a plausible
+  // "removal" sequence. The tokens are real (it is the method's own order); the RESPONSE is not
+  // measured, so say which is which rather than let the overlay imply both.
+  const resp = rec && rec.MR ? ` · ${S.curveview === "mean" ? "mean " : ""}response retained ` +
+    `<b>${rec.MR[S.step].toFixed(3)}</b>`
+    : ` · <span class="unscored">ranking only — ${S.mask}/${S.mode} not evaluated for this bundle</span>`;
+  $("scrubval").innerHTML = `<b>${S.step * 5}%</b> = ${n} of ${total} deletable tokens${resp}`;
+  document.body.classList.toggle("unscored-cell", !(rec && rec.MR));
+  $("scrub").value = S.step; $("scrub2").value = S.step;
+  $("scrub2val").textContent = `${S.step * 5}%`;
+  const svg = $("curve");
+  if (svg._X){
+    const cur = svg.querySelector("#curvecursor");
+    if (cur){ cur.setAttribute("x1", svg._X(S.step)); cur.setAttribute("x2", svg._X(S.step)); }
+    for (const d of svg.querySelectorAll(".curvedot")){
+      const x = svg._series.find(z => z.m === d.dataset.m);
+      d.setAttribute("cx", svg._X(S.step)); d.setAttribute("cy", svg._Y(x.rec.MR[S.step]));
+    }
+  }
+  if (S.compare) renderCompareStep();
+  writeURL();
+}
+
+/* ---------------------------------------------------------------- scoreboard */
+function renderScoreboard(){
+  // The published tables/results_*.tsv are DELETION scoreboards, so they must not be shown under
+  // insertion — the numbers would look plausible and describe the wrong direction. Insertion
+  // sources its dataset mean from the per-mode paired means the index computed instead.
+  const tsv = (S.index.aggregate[S.mask] || {})[S.ds] || {};
+  const meansLeg = ((S._meansCur || {})[S.leg]) || {};
+  /* RECORDS FIRST, TSV only as a fallback. tables/results_*.tsv were written 2026-08-11 and the
+     campaign has moved a long way since: flowtracer was restored to full coverage on the 82
+     bundles whose attention capture predated the 2048 regeneration, records outside the v5
+     scored population are no longer read, and rollout/attnlrp/reagent/heta did not exist as arms
+     — the blur table does not even carry mmmu. Preferring it for deletion meant the scoreboard
+     showed August numbers for a corpus that had been rebuilt underneath it, with no indication.
+     The per-mode paired means are computed from the records actually on disk, so they are the
+     honest source; the TSV stays as a fallback for a cell with no records at all. */
+  const useTsv = Object.keys(meansLeg).length === 0 && Object.keys(tsv).length > 0
+                 && S.mode === "deletion";
+  const meanOf = arm => useTsv ? (tsv[arm] || {})[S.leg] : meansLeg[arm];
+  const ns = useTsv ? ((S.index.aggregate[S.mask] || {})._n || {})[S.ds]
+                    : (Object.values(meansLeg)[0] || {}).n;
+  const rows = [];
+  const lower = betterIsLower();
+  let bestAgg = lower ? 1e9 : -1e9, bestSamp = lower ? 1e9 : -1e9;
+  const wins = (v, best) => lower ? v < best : v > best;
+  const entries = S.index.arm_rows.map(row => {
+    const a = meanOf(row.arm), r = armRec(row.arm);
+    if (a && a.rise != null && wins(a.rise, bestAgg)) bestAgg = a.rise;
+    if (r && r.rise != null && wins(r.rise, bestSamp)) bestSamp = r.rise;
+    return {...row, a, r};
+  }).filter(e => e.a || e.r);
+  const bestAggRise = bestAgg, bestSampRise = bestSamp;
+
+  // ✓/✗ split view: the dataset-mean columns become correct-vs-incorrect pairs. Both groups
+  // partition the SAME paired population the headline mean uses, so the three numbers are
+  // directly comparable; the "vs raw" column steps aside to make room.
+  const splitLeg = S.oksplit ? ((S._splitCur || {})[S.leg] || {}) : null;
+  const useSplit = !!(splitLeg && Object.keys(splitLeg).length);
+  let bestOk = lower ? 1e9 : -1e9, bestBad = lower ? 1e9 : -1e9;
+  if (useSplit)
+    for (const e of entries){
+      const sp = splitLeg[e.arm] || {};
+      if (sp.ok && wins(sp.ok.rise, bestOk)) bestOk = sp.ok.rise;
+      if (sp.bad && wins(sp.bad.rise, bestBad)) bestBad = sp.bad.rise;
+    }
+  const nOf = tag => { const v = Object.values(splitLeg || {}).find(x => x[tag]);
+                       return v ? v[tag].n : "?"; };
+  if (useSplit)
+    rows.push(`<thead><tr><th>method</th><th colspan="2">✓ correct (n=${nOf("ok")})</th>
+      <th colspan="2">✗ incorrect (n=${nOf("bad")})</th><th colspan="2">this sample</th></tr>
+      <tr><th></th><th>RISE</th><th>MAS</th><th>RISE</th><th>MAS</th>
+      <th>RISE</th><th>MAS</th></tr></thead><tbody>`);
+  else if (S.oksplit)
+    rows.push(`<thead><tr><th colspan="6"><span class="hint">no correctness split available for
+      this cell (rebuild the index caches: restart the server)</span></th></tr></thead><tbody>`);
+  else
+  rows.push(`<thead><tr><th>method</th><th colspan="3">dataset mean${ns ? ` (n=${ns})` : ""}${
+      useTsv ? "" : " <span class='hint'>from records</span>"}</th>
+    <th colspan="2">this sample</th></tr>
+    <tr><th></th><th>RISE</th><th class="vs">vs raw</th><th>MAS</th>
+    <th>RISE</th><th>MAS</th></tr></thead><tbody>`);
+
+  const curArm = armOf(S.method);
+  const fam = [];                                   // families in ARM_ROWS order
+  for (const e of entries){
+    const g = fam.find(x => x.name === e.family);
+    (g ? g.rows : (fam.push({name: e.family, rows: []}), fam[fam.length - 1].rows)).push(e);
+  }
+  const num = (v, best) => v == null ? `<span class="dash">—</span>`
+    : `<span class="${Math.abs(v - best) < 1e-9 ? "star" : ""}">${v.toFixed(3)}</span>`;
+
+  for (const g of fam){
+    // The base is this family's own raw arm, so "vs raw" answers "did the addition help THIS
+    // method", not "did it beat the winner". A family whose raw arm has no record shows no deltas
+    // rather than silently baselining against its second rung.
+    const base = g.rows.find(e => e.variant === "raw");
+    const baseRise = base && base.a ? base.a.rise : null;
+    const ours = g.rows.some(e => e.ours);
+    rows.push(`<tr class="famrow${ours ? " ours" : ""}"><td colspan="${useSplit ? 7 : 6}">${esc(g.name)}${
+      ours ? ' <span class="tag">ours</span>' : ""}</td></tr>`);
+    for (const e of g.rows){
+      const isBase = e === base;
+      const cls = [e.ours ? "ours" : "", e.arm === curArm ? "cur" : "", isBase ? "base" : ""]
+        .filter(Boolean).join(" ");
+      // vs raw: DIVERGING, and it has to follow BETTER rather than the sign. Under deletion a
+      // negative delta is an improvement; under insertion the same negative number is a regression.
+      let vs = `<span class="dash">—</span>`;
+      if (!isBase && baseRise != null && e.a && e.a.rise != null){
+        const d = e.a.rise - baseRise;
+        const better = lower ? d < 0 : d > 0;
+        const cl = Math.abs(d) < 0.002 ? "flat" : better ? "up" : "down";
+        vs = `<span class="delta ${cl}">${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(3)}</span>`;
+      }
+      if (useSplit){
+        const sp = splitLeg[e.arm] || {};
+        rows.push(`<tr class="${cls}"><td class="vname" — " + esc(e.note) : ""}">${esc(e.variant)}</td>
+          <td>${sp.ok ? num(sp.ok.rise, bestOk) : `<span class="dash">—</span>`}</td>
+          <td>${sp.ok ? sp.ok.mas.toFixed(3) : `<span class="dash">—</span>`}</td>
+          <td>${sp.bad ? num(sp.bad.rise, bestBad) : `<span class="dash">—</span>`}</td>
+          <td>${sp.bad ? sp.bad.mas.toFixed(3) : `<span class="dash">—</span>`}</td>
+          <td>${e.r && e.r.rise != null ? num(e.r.rise, bestSampRise) : `<span class="dash">—</span>`}</td>
+          <td>${e.r && e.r.mas != null ? e.r.mas.toFixed(3) : `<span class="dash">—</span>`}</td></tr>`);
+        continue;
+      }
+      rows.push(`<tr class="${cls}"><td class="vname" — " + esc(e.note) : ""}">${esc(e.variant)}</td>
+        <td>${e.a && e.a.rise != null ? num(e.a.rise, bestAggRise) : `<span class="dash">—</span>`}</td>
+        <td class="vs">${vs}</td>
+        <td>${e.a && e.a.mas != null ? e.a.mas.toFixed(3) : `<span class="dash">—</span>`}</td>
+        <td>${e.r && e.r.rise != null ? num(e.r.rise, bestSampRise) : `<span class="dash">—</span>`}</td>
+        <td>${e.r && e.r.mas != null ? e.r.mas.toFixed(3) : `<span class="dash">—</span>`}</td></tr>`);
+    }
+  }
+  rows.push(`</tbody><tfoot><tr><td colspan="${useSplit ? 7 : 6}">${useSplit ?
+    `✓/✗ = the model's 'Final answer:' string-matches the gold (mechanical rule, not a judge);
+    both groups partition the same paired population · ` : ""}★ best RISE in column (${S.mode}, so ${
+    lower ? "LOWEST" : "HIGHEST"} wins) · <b>vs raw</b> compares each addition with its OWN
+    family's raw arm, ${lower ? "so a fall is a gain" : "so a rise is a gain"} · ${S.leg} leg ·
+    ${S.mask} substrate · shaded = the arm you are viewing · per-sample stars are noisy — the
+    dataset mean is the claim</td></tr></tfoot>`);
+  $("scoreboard").innerHTML = rows.join("");
+}
+
+/* ---------------------------------------------------------------- compare */
+let _cmpSeq = 0;
+async function renderCompare(keepOpen){
+  const on = keepOpen || S.compare;
+  S.compare = on;
+  $("compare").style.display = on ? "block" : "none";
+  $("comparebtn").textContent = on ? "Close compare" : "Compare all";
+  if (!on) return;
+  const seq = ++_cmpSeq;
+  const grid = $("comparegrid"); grid.innerHTML = "";
+  for (const m of ORDERED){
+    if (m === "posnull") continue;
+    // A cold W cache is a NORMAL state -- the server says so at index time ("not required for
+    // completeness") -- and /api/scores 404s for that method. This loop awaits each method in
+    // turn, so an unhandled throw here used to abandon the grid at whatever had rendered so far
+    // and leave no clue why: pnocal is cold on all three datasets, sits third in ORDERED, and
+    // took the other four cards down with it. Say which method is missing and keep going.
+    let sc = null;
+    try { sc = await getScores(m); }
+    catch (e) {
+      if (seq !== _cmpSeq) return;
+      const skip = document.createElement("div"); skip.className = "ccard";
+      skip.innerHTML = `<h3><span class="dot" style="width:10px;height:10px;border-radius:3px;
+          background:${COLOR[m]};display:inline-block"></span>${esc(methodMeta(m).label)}</h3>
+        <div class="nums"><span class="muted">no cached scores for this bundle — warm it with
+        <span class="mono">scripts/build_w.sh</span></span></div>`;
+      grid.appendChild(skip);
+      continue;
+    }
+    if (seq !== _cmpSeq) return;                       // a newer run took over
+    const card = document.createElement("div"); card.className = "ccard";
+    const meta = methodMeta(m), arm = armAvail(m).arm, rec = armRec(arm);
+    card.innerHTML = `<h3><span class="dot" style="width:10px;height:10px;border-radius:3px;
+        background:${COLOR[m]};display:inline-block"></span>${esc(meta.label)}
+        ${meta.ours ? '<span class="ours" style="font-size:10px;border:1px solid var(--grid);border-radius:999px;padding:0 6px">ours</span>' : ""}
+        <small class="muted mono" style="margin-left:auto">${esc(arm)}</small></h3>
+      <canvas></canvas>
+      <div class="nums">
+        <span>RISE <b>${rec && rec.rise != null ? rec.rise.toFixed(3) : "—"}</b></span>
+        <span>MAS <b>${rec && rec.mas != null ? rec.mas.toFixed(3) : "—"}</b></span>
+        <span>resp@step <b class="respval">${rec && rec.MR ? rec.MR[S.step].toFixed(3) : "—"}</b></span>
+      </div>`;
+    card.querySelector("canvas").dataset.m = m;
+    card.onclick = () => { S.method = m; S.compare = false; renderCompare(); refresh(); };
+    grid.appendChild(card);
+    drawOverlay(card.querySelector("canvas"), sc, {method: m, w: 460});
+  }
+}
+/* ---------------------------------------------------------------- export */
+async function exportPNG(){
+  const img = $("imgcanvas"), svg = $("curve");
+  const pad = 20, W = 1240;
+  const imgW = 600, imgH = Math.round(img.height * (imgW / img.width));
+  const vb = (svg.getAttribute("viewBox") || "0 0 1100 280").split(" ").map(Number);
+  const curW = W - imgW - 3 * pad, curH = Math.round(vb[3] * (curW / vb[2]));
+  const H = Math.max(imgH, curH) + 90;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const x = c.getContext("2d");
+  x.fillStyle = "#fcfcfb"; x.fillRect(0, 0, W, H);
+  x.fillStyle = "#0b0b0b"; x.font = "600 16px system-ui, sans-serif";
+  x.fillText(`${S.qid} · ${methodMeta(S.method).label} (${armOf(S.method)}) · ${S.leg} leg · ` +
+    `${S.mask} · ${S.mode} · ${S.mode === "deletion" ? "removed" : "restored"} ${S.step * 5}%`, pad, 32);
+  const rec = curveRec(S.method);
+  x.font = "13px system-ui, sans-serif"; x.fillStyle = "#52514e";
+  if (rec) x.fillText(`RISE ${rec.rise.toFixed(3)}   MAS ${rec.mas != null ? rec.mas.toFixed(3) : "—"}` +
+    (S.curveview === "mean" ? `   (dataset mean, n=${rec.n})` : "   (this sample)"), pad, 54);
+  x.drawImage(img, pad, 70, imgW, imgH);
+  const clone = svg.cloneNode(true);
+  clone.setAttribute("width", vb[2]); clone.setAttribute("height", vb[3]);
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const im = new Image();
+  await new Promise((res, rej) => { im.onload = res; im.onerror = rej;
+    im.src = "data:image/svg+xml;charset=utf-8," +
+      encodeURIComponent(new XMLSerializer().serializeToString(clone)); });
+  x.drawImage(im, imgW + 2 * pad, 70, curW, curH);
+  const a = document.createElement("a");
+  a.download = `playground_${S.qid}_${armOf(S.method).replace(/[^\w.-]+/g, "_")}.png`;
+  a.href = c.toDataURL("image/png");
+  a.click();
+}
+
+async function renderCompareStep(){
+  for (const cv of $("comparegrid").querySelectorAll("canvas")){
+    const m = cv.dataset.m, sc = await getScores(m);
+    drawOverlay(cv, sc, {method: m, w: 460});
+    const rec = armRec(armAvail(m).arm);
+    const el = cv.parentElement.querySelector(".respval");
+    if (el && rec && rec.MR) el.textContent = rec.MR[S.step].toFixed(3);
+  }
+}
+</script>
+</body>
+</html>
